@@ -1,0 +1,123 @@
+import { User, UserPermissions, UserRole } from '@/types/user';
+
+export const getUserPermissions = (role: UserRole): UserPermissions => {
+  switch (role) {
+    case 'user':
+      return {
+        canSubmitRequest: true,
+        canApproveLevel1: false,
+        canApproveLevel2: false,
+        canViewAllRequests: false,
+        canExportData: false,
+        canManageEquipment: false,
+        canViewAuditLog: false,
+        canReceiveNotifications: true,
+      };
+    case 'supervisor':
+      return {
+        canSubmitRequest: true,
+        canApproveLevel1: true,
+        canApproveLevel2: false,
+        canViewAllRequests: true,
+        canExportData: true,
+        canManageEquipment: false,
+        canViewAuditLog: true,
+        canReceiveNotifications: true,
+      };
+    case 'director':
+      return {
+        canSubmitRequest: true,
+        canApproveLevel1: true,
+        canApproveLevel2: true,
+        canViewAllRequests: true,
+        canExportData: true,
+        canManageEquipment: true,
+        canViewAuditLog: true,
+        canReceiveNotifications: true,
+      };
+    case 'administrator':
+      return {
+        canSubmitRequest: false,
+        canApproveLevel1: false,
+        canApproveLevel2: false,
+        canViewAllRequests: true,
+        canExportData: true,
+        canManageEquipment: false,
+        canViewAuditLog: true,
+        canReceiveNotifications: true,
+      };
+  }
+};
+
+export const mockUsers: User[] = [
+  {
+    id: '1',
+    firstName: 'Jean',
+    lastName: 'Dubois',
+    email: 'jean.dubois@mine.ca',
+    role: 'user',
+    department: 'Maintenance',
+    zone: 'Zone A - Extraction',
+    phone: '+1 418 555-0101',
+    employeeId: 'MNT001',
+    isActive: true,
+    lastLogin: new Date('2024-01-15T08:30:00'),
+  },
+  {
+    id: '2',
+    firstName: 'Marie',
+    lastName: 'Tremblay',
+    email: 'marie.tremblay@mine.ca',
+    role: 'user',
+    department: 'Opérations',
+    zone: 'Zone B - Traitement',
+    phone: '+1 418 555-0102',
+    employeeId: 'OPS002',
+    isActive: true,
+    lastLogin: new Date('2024-01-15T09:15:00'),
+  },
+  {
+    id: '3',
+    firstName: 'Pierre',
+    lastName: 'Leblanc',
+    email: 'pierre.leblanc@mine.ca',
+    role: 'user',
+    department: 'Supervision',
+    zone: 'Multi-zones',
+    phone: '+1 418 555-0201',
+    employeeId: 'SUP001',
+    isActive: true,
+    lastLogin: new Date('2024-01-15T07:45:00'),
+  },
+  {
+    id: '4',
+    firstName: 'Sylvie',
+    lastName: 'Martin',
+    email: 'sylvie.martin@mine.ca',
+    role: 'user',
+    department: 'Sécurité',
+    zone: 'Zone C - Transport',
+    phone: '+1 418 555-0202',
+    employeeId: 'SEC001',
+    isActive: true,
+    lastLogin: new Date('2024-01-15T08:00:00'),
+  },
+  {
+    id: '5',
+    firstName: 'Robert',
+    lastName: 'Gagnon',
+    email: 'robert.gagnon@mine.ca',
+    role: 'user',
+    department: 'Ingénierie',
+    zone: 'Toutes zones',
+    phone: '+1 418 555-0301',
+    employeeId: 'ING001',
+    isActive: true,
+    lastLogin: new Date('2024-01-15T07:30:00'),
+  },
+];
+
+export const getCurrentUser = (): User => {
+  // Simuler un utilisateur connecté - en production, ceci viendrait de l'auth
+  return mockUsers[0]; // Jean Dubois - Initiateur
+};
