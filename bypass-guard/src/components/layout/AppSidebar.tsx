@@ -11,7 +11,8 @@ import {
   Shield,
   ChevronDown,
   Users,
-  Activity
+  Activity,
+  Key
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
@@ -100,6 +101,13 @@ const adminItems = [
     title: "Paramètres",
     url: "/settings",
     icon: Settings,
+    badge: null,
+    role: ['administrator']
+  },
+  {
+    title: "Rôles et Permissions",
+    url: "/roles-permissions",
+    icon: Key,
     badge: null,
     role: ['administrator']
   },

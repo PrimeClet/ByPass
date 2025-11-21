@@ -20,9 +20,33 @@ export interface UserPermissions {
   canApproveLevel2: boolean;
   canViewAllRequests: boolean;
   canExportData: boolean;
-  canManageEquipment: boolean;
   canViewAuditLog: boolean;
   canReceiveNotifications: boolean;
+  canManageSettings: boolean;
+  canRejectRequest: boolean;
+  canCancelRequest: boolean;
+  canViewDashboard: boolean;
+  canManageRoles: boolean;
+  // Permissions pour les équipements
+  canViewEquipment: boolean;
+  canCreateEquipment: boolean;
+  canUpdateEquipment: boolean;
+  canDeleteEquipment: boolean;
+  // Permissions pour les utilisateurs
+  canViewUser: boolean;
+  canCreateUser: boolean;
+  canUpdateUser: boolean;
+  canDeleteUser: boolean;
+  // Permissions pour les zones
+  canViewZone: boolean;
+  canCreateZone: boolean;
+  canUpdateZone: boolean;
+  canDeleteZone: boolean;
+  // Permissions pour les capteurs
+  canViewSensor: boolean;
+  canCreateSensor: boolean;
+  canUpdateSensor: boolean;
+  canDeleteSensor: boolean;
 }
 
 export interface BypassRequest {
