@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { 
   CheckCircle, 
   XCircle, 
@@ -61,6 +63,8 @@ export default function Validation() {
   const [requestApprobation, setRequestApprobationList] = useState([]);
   const [rejectionReason, setRejectionReason] = useState("")
   const navigate = useNavigate()
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(3);
 
   const reasonLabels: Record<BypassReason, string> = {
       preventive_maintenance: 'Maintenance préventive',
@@ -174,6 +178,17 @@ export default function Validation() {
 
   }, [location.key])
 
+  // Calcul de la pagination
+  const totalPages = Math.ceil(requestApprobation.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedRequests = requestApprobation.slice(startIndex, endIndex);
+
+  // Réinitialiser la page quand le nombre d'éléments par page change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
+
   return (
     <div className="flex-1 space-y-6 p-6">
       {/* Header */}
@@ -192,9 +207,36 @@ export default function Validation() {
         </div>
       </div>
 
+      {/* Contrôles de pagination et sélection du nombre d'éléments */}
+      {requestApprobation.length > 0 && (
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="items-per-page">Éléments par page:</Label>
+            <Select 
+              value={itemsPerPage.toString()} 
+              onValueChange={(value) => setItemsPerPage(Number(value))}
+            >
+              <SelectTrigger className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3</SelectItem>
+                <SelectItem value="6">6</SelectItem>
+                <SelectItem value="9">9</SelectItem>
+                <SelectItem value="12">12</SelectItem>
+                <SelectItem value="15">15</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Affichage de {startIndex + 1} à {Math.min(endIndex, requestApprobation.length)} sur {requestApprobation.length} demande{requestApprobation.length > 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
+
       {/* Pending requests */}
       <div className="space-y-6">
-        {requestApprobation.map((request) => (
+        {paginatedRequests.map((request) => (
           <Card key={request.request_code} className="overflow-hidden">
             <CardHeader className="bg-muted/50">
               <div className="flex items-center justify-between">
@@ -358,6 +400,55 @@ export default function Validation() {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Pagination */}
+      {requestApprobation.length > 0 && totalPages > 1 && (
+        <div className="flex justify-end items-center mt-6 float-right">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                      setCurrentPage(currentPage - 1);
+                    }
+                  }}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCurrentPage(page);
+                    }}
+                    isActive={currentPage === page}
+                    className="cursor-pointer"
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                      setCurrentPage(currentPage + 1);
+                    }
+                  }}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       )}
     </div>
   )
