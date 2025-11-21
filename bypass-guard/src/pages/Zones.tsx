@@ -5,7 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
 import { getAllZones, getEquipmentByZone } from '@/data/mockEquipment';
 import api from '../axios'
@@ -20,6 +22,8 @@ interface Zone {
 const Zones = () => {
   const { toast } = useToast();
   const [zones, setZones] = useState<Zone[]>([]); // 👈 initialise avec un tableau vide
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(3);
 
   const fetchZones = async () => {
     try {
@@ -50,6 +54,17 @@ const Zones = () => {
   useEffect(() => {
    fetchZones()
   }, []); // 👈 tableau vide = exécuté UNE seule fois au montage
+
+  // Calcul de la pagination
+  const totalPages = Math.ceil(zones.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedZones = zones.slice(startIndex, endIndex);
+
+  // Réinitialiser la page quand le nombre d'éléments par page change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
 
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -200,8 +215,35 @@ const Zones = () => {
         </Dialog>
       </div>
 
+      {/* Contrôles de pagination et sélection du nombre d'éléments */}
+      {zones.length > 0 && (
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="items-per-page">Éléments par page:</Label>
+            <Select 
+              value={itemsPerPage.toString()} 
+              onValueChange={(value) => setItemsPerPage(Number(value))}
+            >
+              <SelectTrigger className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3</SelectItem>
+                <SelectItem value="6">6</SelectItem>
+                <SelectItem value="9">9</SelectItem>
+                <SelectItem value="12">12</SelectItem>
+                <SelectItem value="15">15</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Affichage de {startIndex + 1} à {Math.min(endIndex, zones.length)} sur {zones.length} zone{zones.length > 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {zones.map((zone) => (
+        {paginatedZones.map((zone) => (
           <Card key={zone.id} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -256,6 +298,55 @@ const Zones = () => {
             Créer une zone
           </Button>
         </Card>
+      )}
+
+      {/* Pagination */}
+      {zones.length > 0 && totalPages > 1 && (
+        <div className="flex justify-end items-center mt-6 float-right">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                      setCurrentPage(currentPage - 1);
+                    }
+                  }}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCurrentPage(page);
+                    }}
+                    isActive={currentPage === page}
+                    className="cursor-pointer"
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                      setCurrentPage(currentPage + 1);
+                    }
+                  }}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       )}
     </div>
   );

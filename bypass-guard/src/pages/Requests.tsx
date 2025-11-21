@@ -4,8 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { 
   Search, 
   Filter, 
@@ -79,6 +81,9 @@ export default function Requests() {
   const [requestApprobation, setRequestApprobationList] = useState([]);
   const [requestActifs, setRequestActifList] = useState([]);
   const { users, loading, error, user } = useSelector((state: RootState) => state.user);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(3);
+  const [activeTab, setActiveTab] = useState(user.role !== 'user' ? "mine" : "mine");
   // Déterminer quelle vue afficher selon l'URL
   const isNewRequest = location.pathname === '/requests/new'
 
@@ -121,6 +126,35 @@ export default function Requests() {
     
     return matchesSearch && matchesStatus && matchesPriority
   })
+
+  // Fonction pour obtenir la liste filtrée selon l'onglet actif
+  const getFilteredList = () => {
+    switch (activeTab) {
+      case "all":
+        return filteredRequests;
+      case "mine":
+        return filteredDemand;
+      case "pending":
+        return filteredApprobation;
+      case "active":
+        return filteredActifs;
+      default:
+        return filteredDemand;
+    }
+  }
+
+  const currentFilteredList = getFilteredList();
+
+  // Calcul de la pagination
+  const totalPages = Math.ceil(currentFilteredList.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedList = currentFilteredList.slice(startIndex, endIndex);
+
+  // Réinitialiser la page quand les filtres, l'onglet ou le nombre d'éléments par page changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, priorityFilter, activeTab, itemsPerPage]);
 
 
 
@@ -271,7 +305,7 @@ export default function Requests() {
       </div>
 
       {/* Onglets de navigation */}
-      <Tabs defaultValue={user.role !== 'user'? "mine" : "mine"} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           {(user.role === "administrator") && (
             <TabsTrigger value="all" onClick={resetFilter}>Toutes les demandes</TabsTrigger>
@@ -341,6 +375,33 @@ export default function Requests() {
               </CardContent>
             </Card>
 
+            {/* Contrôles de pagination et sélection du nombre d'éléments */}
+            {filteredRequests.length > 0 && (
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="items-per-page">Éléments par page:</Label>
+                  <Select 
+                    value={itemsPerPage.toString()} 
+                    onValueChange={(value) => setItemsPerPage(Number(value))}
+                  >
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="3">3</SelectItem>
+                      <SelectItem value="6">6</SelectItem>
+                      <SelectItem value="9">9</SelectItem>
+                      <SelectItem value="12">12</SelectItem>
+                      <SelectItem value="15">15</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Affichage de {startIndex + 1} à {Math.min(endIndex, filteredRequests.length)} sur {filteredRequests.length} demande{filteredRequests.length > 1 ? 's' : ''}
+                </div>
+              </div>
+            )}
+
             {/* Requests list */}
             <Card>
               <CardHeader>
@@ -351,7 +412,7 @@ export default function Requests() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {filteredRequests.map((request) => (
+                  {activeTab === "all" && paginatedList.map((request) => (
                     <div 
                       key={request.id} 
                       className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
@@ -391,6 +452,55 @@ export default function Requests() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Pagination */}
+            {filteredRequests.length > 0 && totalPages > 1 && (
+              <div className="flex justify-end items-center mt-6 float-right">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentPage > 1) {
+                            setCurrentPage(currentPage - 1);
+                          }
+                        }}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(page);
+                          }}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext 
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentPage < totalPages) {
+                            setCurrentPage(currentPage + 1);
+                          }
+                        }}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </TabsContent>
             
         )}
@@ -401,14 +511,14 @@ export default function Requests() {
         <TabsContent value="mine" className="space-y-6">
           {requestDemand.length === 0 ? (<Card >
               <CardHeader>
-                <CardTitle>En attente d'approbation</CardTitle>
+                <CardTitle>Mes demandes</CardTitle>
                 <CardDescription>
-                  Demandes nécessitant une action
+                  Vos demandes de bypass
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground text-center py-8">
-                  Aucune demande en attente d'approbation.
+                  Aucune demande.
                 </p>
               </CardContent>
             </Card>) : 
@@ -466,6 +576,33 @@ export default function Requests() {
                   </CardContent>
                 </Card>
 
+                {/* Contrôles de pagination et sélection du nombre d'éléments */}
+                {filteredDemand.length > 0 && (
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="items-per-page">Éléments par page:</Label>
+                      <Select 
+                        value={itemsPerPage.toString()} 
+                        onValueChange={(value) => setItemsPerPage(Number(value))}
+                      >
+                        <SelectTrigger className="w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="3">3</SelectItem>
+                          <SelectItem value="6">6</SelectItem>
+                          <SelectItem value="9">9</SelectItem>
+                          <SelectItem value="12">12</SelectItem>
+                          <SelectItem value="15">15</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Affichage de {startIndex + 1} à {Math.min(endIndex, filteredDemand.length)} sur {filteredDemand.length} demande{filteredDemand.length > 1 ? 's' : ''}
+                    </div>
+                  </div>
+                )}
+
                 {/* Requests list */}
                 <Card>
                   <CardHeader>
@@ -476,7 +613,7 @@ export default function Requests() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {filteredDemand.map((request) => (
+                      {activeTab === "mine" && paginatedList.map((request) => (
                         <div 
                           key={request.id} 
                           className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
@@ -516,6 +653,55 @@ export default function Requests() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Pagination */}
+                {filteredDemand.length > 0 && totalPages > 1 && (
+                  <div className="flex justify-end items-center mt-6 float-right">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (currentPage > 1) {
+                                setCurrentPage(currentPage - 1);
+                              }
+                            }}
+                            className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentPage(page);
+                              }}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext 
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (currentPage < totalPages) {
+                                setCurrentPage(currentPage + 1);
+                              }
+                            }}
+                            className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
               </>
             )}
         </TabsContent>
@@ -591,6 +777,33 @@ export default function Requests() {
                     </CardContent>
                   </Card>
 
+                  {/* Contrôles de pagination et sélection du nombre d'éléments */}
+                  {filteredApprobation.length > 0 && (
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="items-per-page">Éléments par page:</Label>
+                        <Select 
+                          value={itemsPerPage.toString()} 
+                          onValueChange={(value) => setItemsPerPage(Number(value))}
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="3">3</SelectItem>
+                            <SelectItem value="6">6</SelectItem>
+                            <SelectItem value="9">9</SelectItem>
+                            <SelectItem value="12">12</SelectItem>
+                            <SelectItem value="15">15</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Affichage de {startIndex + 1} à {Math.min(endIndex, filteredApprobation.length)} sur {filteredApprobation.length} demande{filteredApprobation.length > 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Requests list */}
                   <Card>
                     <CardHeader>
@@ -601,7 +814,7 @@ export default function Requests() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {filteredApprobation.map((request) => (
+                        {activeTab === "pending" && paginatedList.map((request) => (
                           <div 
                             key={request.id} 
                             className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
@@ -641,6 +854,55 @@ export default function Requests() {
                       </div>
                     </CardContent>
                   </Card>
+
+                  {/* Pagination */}
+                  {filteredApprobation.length > 0 && totalPages > 1 && (
+                    <div className="flex justify-end items-center mt-6 float-right">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (currentPage > 1) {
+                                  setCurrentPage(currentPage - 1);
+                                }
+                              }}
+                              className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(page);
+                                }}
+                                isActive={currentPage === page}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ))}
+                          <PaginationItem>
+                            <PaginationNext 
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (currentPage < totalPages) {
+                                  setCurrentPage(currentPage + 1);
+                                }
+                              }}
+                              className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
                 </>
               )}
             </TabsContent>
@@ -648,14 +910,14 @@ export default function Requests() {
             <TabsContent value="active" className="space-y-6">
             {requestActifs.length === 0 ? (<Card >
                 <CardHeader>
-                  <CardTitle>En attente d'approbation</CardTitle>
+                  <CardTitle>Bypass actifs</CardTitle>
                   <CardDescription>
-                    Demandes nécessitant une action
+                    Demandes de bypass actuellement actives
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-center py-8">
-                    Aucune demande en attente d'approbation.
+                    Aucun bypass actif.
                   </p>
                 </CardContent>
               </Card>) : 
@@ -713,6 +975,33 @@ export default function Requests() {
                     </CardContent>
                   </Card>
 
+                  {/* Contrôles de pagination et sélection du nombre d'éléments */}
+                  {filteredActifs.length > 0 && (
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="items-per-page">Éléments par page:</Label>
+                        <Select 
+                          value={itemsPerPage.toString()} 
+                          onValueChange={(value) => setItemsPerPage(Number(value))}
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="3">3</SelectItem>
+                            <SelectItem value="6">6</SelectItem>
+                            <SelectItem value="9">9</SelectItem>
+                            <SelectItem value="12">12</SelectItem>
+                            <SelectItem value="15">15</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Affichage de {startIndex + 1} à {Math.min(endIndex, filteredActifs.length)} sur {filteredActifs.length} demande{filteredActifs.length > 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Requests list */}
                   <Card>
                     <CardHeader>
@@ -723,7 +1012,7 @@ export default function Requests() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {filteredActifs.map((request) => (
+                        {activeTab === "active" && paginatedList.map((request) => (
                           <div 
                             key={request.id} 
                             className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
@@ -763,6 +1052,55 @@ export default function Requests() {
                       </div>
                     </CardContent>
                   </Card>
+
+                  {/* Pagination */}
+                  {filteredActifs.length > 0 && totalPages > 1 && (
+                    <div className="flex justify-end items-center mt-6 float-right">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (currentPage > 1) {
+                                  setCurrentPage(currentPage - 1);
+                                }
+                              }}
+                              className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(page);
+                                }}
+                                isActive={currentPage === page}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ))}
+                          <PaginationItem>
+                            <PaginationNext 
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (currentPage < totalPages) {
+                                  setCurrentPage(currentPage + 1);
+                                }
+                              }}
+                              className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
                 </>
               )}
             </TabsContent>

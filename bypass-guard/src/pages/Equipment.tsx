@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
 import { mockEquipment, getAllZones } from '@/data/mockEquipment';
 import type { Equipment, EquipmentType, EquipmentStatus, CriticalityLevel, Zone } from '@/types/equipment';
@@ -21,6 +22,8 @@ const Equipment = () => {
   const [selectedZone, setSelectedZone] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [zones, setZones] = useState<Zone[]>([])
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(3);
 
   const [formData, setFormData] = useState({ 
     name: '',
@@ -129,6 +132,17 @@ const Equipment = () => {
     
     return matchesSearch && matchesZone && matchesStatus;
   });
+
+  // Calcul de la pagination
+  const totalPages = Math.ceil(filteredEquipment.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedEquipment = filteredEquipment.slice(startIndex, endIndex);
+
+  // Réinitialiser la page quand les filtres ou le nombre d'éléments par page changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedZone, selectedStatus, itemsPerPage]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -455,9 +469,36 @@ const Equipment = () => {
         </CardContent>
       </Card>
 
+      {/* Contrôles de pagination et sélection du nombre d'éléments */}
+      {filteredEquipment.length > 0 && (
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="items-per-page">Éléments par page:</Label>
+            <Select 
+              value={itemsPerPage.toString()} 
+              onValueChange={(value) => setItemsPerPage(Number(value))}
+            >
+              <SelectTrigger className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3</SelectItem>
+                <SelectItem value="6">6</SelectItem>
+                <SelectItem value="9">9</SelectItem>
+                <SelectItem value="12">12</SelectItem>
+                <SelectItem value="15">15</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Affichage de {startIndex + 1} à {Math.min(endIndex, filteredEquipment.length)} sur {filteredEquipment.length} équipement{filteredEquipment.length > 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
+
       {/* Liste des équipements */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredEquipment.map((eq) => (
+        {paginatedEquipment.map((eq) => (
           <Card key={eq.id} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -532,6 +573,55 @@ const Equipment = () => {
             </Button>
           )}
         </Card>
+      )}
+
+      {/* Pagination */}
+      {filteredEquipment.length > 0 && totalPages > 1 && (
+        <div className="flex justify-end items-center mt-6 float-right">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                      setCurrentPage(currentPage - 1);
+                    }
+                  }}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCurrentPage(page);
+                    }}
+                    isActive={currentPage === page}
+                    className="cursor-pointer"
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                      setCurrentPage(currentPage + 1);
+                    }
+                  }}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       )}
     </div>
   );

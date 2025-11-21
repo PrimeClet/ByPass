@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Plus, Pencil, Trash2, Search, Settings } from 'lucide-react';
 import { mockEquipment } from '@/data/mockEquipment';
 import { Sensor, SensorType, SensorStatus } from '@/types/equipment';
@@ -36,6 +37,8 @@ const Sensors: React.FC = () => {
     status: 'active' as SensorStatus
   });
   const [sensor, setSensor] = useState<Sensor[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(3);
 
   // Flatten all sensors from all equipment
   // const allSensors = equipmentData.flatMap(equipment => 
@@ -126,6 +129,17 @@ const Sensors: React.FC = () => {
     console.log(selectedEquipment)
     return matchesSearch && matchesType && matchesStatus && matchesEquipment;
   });
+
+  // Calcul de la pagination
+  const totalPages = Math.ceil(filteredSensors.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedSensors = filteredSensors.slice(startIndex, endIndex);
+
+  // Réinitialiser la page quand les filtres ou le nombre d'éléments par page changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedType, selectedStatus, selectedEquipment, itemsPerPage]);
 
   const handleAddSensor = () => {
     const sensor: Sensor = {
@@ -498,6 +512,33 @@ const Sensors: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Contrôles de pagination et sélection du nombre d'éléments */}
+      {filteredSensors.length > 0 && (
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="items-per-page">Éléments par page:</Label>
+            <Select 
+              value={itemsPerPage.toString()} 
+              onValueChange={(value) => setItemsPerPage(Number(value))}
+            >
+              <SelectTrigger className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3</SelectItem>
+                <SelectItem value="6">6</SelectItem>
+                <SelectItem value="9">9</SelectItem>
+                <SelectItem value="12">12</SelectItem>
+                <SelectItem value="15">15</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Affichage de {startIndex + 1} à {Math.min(endIndex, filteredSensors.length)} sur {filteredSensors.length} capteur{filteredSensors.length > 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Capteurs ({filteredSensors.length})</CardTitle>
@@ -518,7 +559,7 @@ const Sensors: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredSensors.map((sensor) => (
+              {paginatedSensors.map((sensor) => (
                 <TableRow key={sensor.id}>
                   <TableCell className="font-medium">{sensor.name}</TableCell>
                   <TableCell>{sensor.code}</TableCell>
@@ -727,6 +768,55 @@ const Sensors: React.FC = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {filteredSensors.length > 0 && totalPages > 1 && (
+        <div className="flex justify-end items-center mt-6 float-right">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                      setCurrentPage(currentPage - 1);
+                    }
+                  }}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCurrentPage(page);
+                    }}
+                    isActive={currentPage === page}
+                    className="cursor-pointer"
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                      setCurrentPage(currentPage + 1);
+                    }
+                  }}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
   );
 };

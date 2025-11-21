@@ -83,16 +83,16 @@ const adminItems = [
     role: ['administrator']
   },
   {
-    title: "Utilisateurs",
-    url: "/users",
-    icon: Users,
+    title: "Capteurs",
+    url: "/sensors",
+    icon: Activity,
     badge: null,
     role: ['administrator']
   },
   {
-    title: "Capteurs",
-    url: "/sensors",
-    icon: Activity,
+    title: "Utilisateurs",
+    url: "/users",
+    icon: Users,
     badge: null,
     role: ['administrator']
   },
