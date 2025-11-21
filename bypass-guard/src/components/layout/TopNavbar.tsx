@@ -112,13 +112,17 @@ export function TopNavbar() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="w-4 h-4 mr-2" />
-                Profil
+              <DropdownMenuItem asChild>
+                <Link to="/profile">
+                  <User className="w-4 h-4 mr-2" />
+                  Profil
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="w-4 h-4 mr-2" />
-                Paramètres
+              <DropdownMenuItem asChild>
+                <Link to="/settings">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Paramètres
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
