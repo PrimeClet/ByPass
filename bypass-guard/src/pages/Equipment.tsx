@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Building2, Search, Filter } from 'lucide-react';
+import { Plus, Edit2, Trash2, Building2, Search, Filter, LayoutGrid, Table as TableIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
 import { mockEquipment, getAllZones } from '@/data/mockEquipment';
 import type { Equipment, EquipmentType, EquipmentStatus, CriticalityLevel, Zone } from '@/types/equipment';
@@ -21,6 +23,9 @@ const Equipment = () => {
   const [selectedZone, setSelectedZone] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [zones, setZones] = useState<Zone[]>([])
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(3);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   const [formData, setFormData] = useState({ 
     name: '',
@@ -129,6 +134,17 @@ const Equipment = () => {
     
     return matchesSearch && matchesZone && matchesStatus;
   });
+
+  // Calcul de la pagination
+  const totalPages = Math.ceil(filteredEquipment.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedEquipment = filteredEquipment.slice(startIndex, endIndex);
+
+  // Réinitialiser la page quand les filtres ou le nombre d'éléments par page changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedZone, selectedStatus, itemsPerPage]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -455,83 +471,279 @@ const Equipment = () => {
         </CardContent>
       </Card>
 
-      {/* Liste des équipements */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredEquipment.map((eq) => (
-          <Card key={eq.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-primary" />
-                  <CardTitle className="text-lg">{eq.name}</CardTitle>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(eq)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(eq.id)}
-                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              <CardDescription>{eq.code} - {eq.type}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Zone:</span>
-                <Badge variant="outline">{eq.zone}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Statut:</span>
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${getStatusColor(eq.status)}`} />
-                  <span className="text-sm">{eq.status}</span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Criticité:</span>
-                <span className={`text-sm font-medium ${getCriticalityColor(eq.criticite)}`}>
-                  {eq.criticite}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Capteurs:</span>
-                <Badge variant="secondary">{eq.sensors.length}</Badge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Contrôles de pagination et sélection du nombre d'éléments */}
+      {filteredEquipment.length > 0 && (
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="items-per-page">Éléments par page:</Label>
+              <Select 
+                value={itemsPerPage.toString()} 
+                onValueChange={(value) => setItemsPerPage(Number(value))}
+              >
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="6">6</SelectItem>
+                  <SelectItem value="9">9</SelectItem>
+                  <SelectItem value="12">12</SelectItem>
+                  <SelectItem value="15">15</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2 border rounded-md p-1">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="h-8"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className="h-8"
+              >
+                <TableIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Affichage de {startIndex + 1} à {Math.min(endIndex, filteredEquipment.length)} sur {filteredEquipment.length} équipement{filteredEquipment.length > 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
 
-      {filteredEquipment.length === 0 && (
-        <Card className="p-12 text-center">
-          <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">
-            {equipment.length === 0 ? 'Aucun équipement' : 'Aucun résultat'}
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            {equipment.length === 0 
-              ? 'Commencez par ajouter votre premier équipement.'
-              : 'Aucun équipement ne correspond à vos critères de recherche.'
-            }
-          </p>
-          {equipment.length === 0 && (
-            <Button onClick={openCreateDialog}>
-              <Plus className="w-4 h-4 mr-2" />
-              Ajouter un équipement
-            </Button>
+      {/* Liste des équipements */}
+      {viewMode === 'grid' ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedEquipment.map((eq) => (
+              <Card key={eq.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-primary" />
+                      <CardTitle className="text-lg">{eq.name}</CardTitle>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(eq)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(eq.id)}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <CardDescription>{eq.code} - {eq.type}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Zone:</span>
+                    <Badge variant="outline">{eq.zone}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Statut:</span>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${getStatusColor(eq.status)}`} />
+                      <span className="text-sm">{eq.status}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Criticité:</span>
+                    <span className={`text-sm font-medium ${getCriticalityColor(eq.criticite)}`}>
+                      {eq.criticite}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Capteurs:</span>
+                    <Badge variant="secondary">{eq.sensors.length}</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {filteredEquipment.length === 0 && (
+            <Card className="p-12 text-center">
+              <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                {equipment.length === 0 ? 'Aucun équipement' : 'Aucun résultat'}
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                {equipment.length === 0 
+                  ? 'Commencez par ajouter votre premier équipement.'
+                  : 'Aucun équipement ne correspond à vos critères de recherche.'
+                }
+              </p>
+              {equipment.length === 0 && (
+                <Button onClick={openCreateDialog}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Ajouter un équipement
+                </Button>
+              )}
+            </Card>
           )}
+        </>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Équipements ({filteredEquipment.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nom</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Zone</TableHead>
+                  <TableHead>Fabricant</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead>Criticité</TableHead>
+                  <TableHead>Capteurs</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedEquipment.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8">
+                      <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">
+                        {equipment.length === 0 ? 'Aucun équipement' : 'Aucun résultat'}
+                      </h3>
+                      <p className="text-muted-foreground mb-4">
+                        {equipment.length === 0 
+                          ? 'Commencez par ajouter votre premier équipement.'
+                          : 'Aucun équipement ne correspond à vos critères de recherche.'
+                        }
+                      </p>
+                      {equipment.length === 0 && (
+                        <Button onClick={openCreateDialog}>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Ajouter un équipement
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedEquipment.map((eq) => (
+                    <TableRow key={eq.id}>
+                      <TableCell className="font-medium">
+                        {eq.name}
+                      </TableCell>
+                      <TableCell>{eq.code}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{eq.type}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{eq.zone}</Badge>
+                      </TableCell>
+                      <TableCell>{eq.fabricant || 'N/A'}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${getStatusColor(eq.status)}`} />
+                          <span className="text-sm">{eq.status}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`text-sm font-medium ${getCriticalityColor(eq.criticite)}`}>
+                          {eq.criticite}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{eq.sensors.length}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(eq)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(eq.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
         </Card>
+      )}
+
+      {/* Pagination */}
+      {filteredEquipment.length > 0 && totalPages > 1 && (
+        <div className="flex justify-end items-center mt-6 float-right">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                      setCurrentPage(currentPage - 1);
+                    }
+                  }}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCurrentPage(page);
+                    }}
+                    isActive={currentPage === page}
+                    className="cursor-pointer"
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                      setCurrentPage(currentPage + 1);
+                    }
+                  }}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       )}
     </div>
   );

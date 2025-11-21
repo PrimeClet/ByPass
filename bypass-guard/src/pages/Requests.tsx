@@ -4,8 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { 
   Search, 
   Filter, 
@@ -16,7 +19,9 @@ import {
   XCircle,
   AlertTriangle,
   Eye,
-  ArrowLeft
+  ArrowLeft,
+  LayoutGrid,
+  Table as TableIcon
 } from "lucide-react"
 import { BypassRequestForm } from "@/components/forms/BypassRequestForm"
 import { RequestDetailsModal } from "@/components/RequestDetailsModal"
@@ -79,6 +84,10 @@ export default function Requests() {
   const [requestApprobation, setRequestApprobationList] = useState([]);
   const [requestActifs, setRequestActifList] = useState([]);
   const { users, loading, error, user } = useSelector((state: RootState) => state.user);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(3);
+  const [activeTab, setActiveTab] = useState(user.role !== 'user' ? "mine" : "mine");
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   // Déterminer quelle vue afficher selon l'URL
   const isNewRequest = location.pathname === '/requests/new'
 
@@ -121,6 +130,35 @@ export default function Requests() {
     
     return matchesSearch && matchesStatus && matchesPriority
   })
+
+  // Fonction pour obtenir la liste filtrée selon l'onglet actif
+  const getFilteredList = () => {
+    switch (activeTab) {
+      case "all":
+        return filteredRequests;
+      case "mine":
+        return filteredDemand;
+      case "pending":
+        return filteredApprobation;
+      case "active":
+        return filteredActifs;
+      default:
+        return filteredDemand;
+    }
+  }
+
+  const currentFilteredList = getFilteredList();
+
+  // Calcul de la pagination
+  const totalPages = Math.ceil(currentFilteredList.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedList = currentFilteredList.slice(startIndex, endIndex);
+
+  // Réinitialiser la page quand les filtres, l'onglet ou le nombre d'éléments par page changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, priorityFilter, activeTab, itemsPerPage]);
 
 
 
@@ -271,7 +309,7 @@ export default function Requests() {
       </div>
 
       {/* Onglets de navigation */}
-      <Tabs defaultValue={user.role !== 'user'? "mine" : "mine"} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           {(user.role === "administrator") && (
             <TabsTrigger value="all" onClick={resetFilter}>Toutes les demandes</TabsTrigger>
@@ -341,56 +379,224 @@ export default function Requests() {
               </CardContent>
             </Card>
 
-            {/* Requests list */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Demandes ({filteredRequests.length})</CardTitle>
-                <CardDescription>
-                  Liste des demandes de bypass
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {filteredRequests.map((request) => (
-                    <div 
-                      key={request.id} 
-                      className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+            {/* Contrôles de pagination et sélection du nombre d'éléments */}
+            {filteredRequests.length > 0 && (
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="items-per-page">Éléments par page:</Label>
+                    <Select 
+                      value={itemsPerPage.toString()} 
+                      onValueChange={(value) => setItemsPerPage(Number(value))}
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                          {getStatusIcon(request.status)}
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{request.request_code}</span>
-                            <Badge variant="outline" className={getPriorityColor(request.priority)}>
-                              {request.priority}
-                            </Badge>
-                            <Badge className={getStatusColor(request.status)}>
-                              {request.status}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{request.equipment.name}</p>
-                          <p className="text-xs text-muted-foreground">{request.sensor.name}</p>
-                        </div>
-                      </div>
-                      <div className="text-right space-y-1">
-                        <p className="text-sm font-medium">{request.requester.full_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                        {new Date(request.created_at).toLocaleString("fr-FR", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                        </p>
-                        
-                        <p className="text-xs text-muted-foreground">{request.description}</p>
-                      </div>
-                      <RequestDetailsModal request={request} />
-                    </div>
-                  ))}
+                      <SelectTrigger className="w-24">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3">3</SelectItem>
+                        <SelectItem value="6">6</SelectItem>
+                        <SelectItem value="9">9</SelectItem>
+                        <SelectItem value="12">12</SelectItem>
+                        <SelectItem value="15">15</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2 border rounded-md p-1">
+                    <Button
+                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('grid')}
+                      className="h-8"
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'table' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('table')}
+                      className="h-8"
+                    >
+                      <TableIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="text-sm text-muted-foreground">
+                  Affichage de {startIndex + 1} à {Math.min(endIndex, filteredRequests.length)} sur {filteredRequests.length} demande{filteredRequests.length > 1 ? 's' : ''}
+                </div>
+              </div>
+            )}
+
+            {/* Requests list */}
+            {viewMode === 'grid' ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Demandes ({filteredRequests.length})</CardTitle>
+                  <CardDescription>
+                    Liste des demandes de bypass
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {activeTab === "all" && paginatedList.length === 0 ? (
+                      <div className="text-center py-8">
+                        <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">Aucune demande trouvée.</p>
+                      </div>
+                    ) : (
+                      activeTab === "all" && paginatedList.map((request) => (
+                        <div 
+                          key={request.id} 
+                          className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+                              {getStatusIcon(request.status)}
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{request.request_code}</span>
+                                <Badge variant="outline" className={getPriorityColor(request.priority)}>
+                                  {request.priority}
+                                </Badge>
+                                <Badge className={getStatusColor(request.status)}>
+                                  {request.status}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">{request.equipment.name}</p>
+                              <p className="text-xs text-muted-foreground">{request.sensor.name}</p>
+                            </div>
+                          </div>
+                          <div className="text-right space-y-1">
+                            <p className="text-sm font-medium">{request.requester.full_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                            {new Date(request.created_at).toLocaleString("fr-FR", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                            </p>
+                            
+                            <p className="text-xs text-muted-foreground">{request.description}</p>
+                          </div>
+                          <RequestDetailsModal request={request} />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Demandes ({filteredRequests.length})</CardTitle>
+                  <CardDescription>
+                    Liste des demandes de bypass
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Équipement</TableHead>
+                        <TableHead>Capteur</TableHead>
+                        <TableHead>Demandeur</TableHead>
+                        <TableHead>Priorité</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {activeTab === "all" && paginatedList.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8">
+                            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground">Aucune demande trouvée.</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        activeTab === "all" && paginatedList.map((request) => (
+                          <TableRow key={request.id}>
+                            <TableCell className="font-medium">{request.request_code}</TableCell>
+                            <TableCell>{request.equipment.name}</TableCell>
+                            <TableCell>{request.sensor.name}</TableCell>
+                            <TableCell>{request.requester.full_name}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={getPriorityColor(request.priority)}>
+                                {request.priority}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getStatusColor(request.status)}>
+                                {request.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {new Date(request.created_at).toLocaleString("fr-FR", {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              })}
+                            </TableCell>
+                            <TableCell>
+                              <RequestDetailsModal request={request} />
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Pagination */}
+            {filteredRequests.length > 0 && totalPages > 1 && (
+              <div className="flex justify-end items-center mt-6 float-right">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentPage > 1) {
+                            setCurrentPage(currentPage - 1);
+                          }
+                        }}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(page);
+                          }}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext 
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentPage < totalPages) {
+                            setCurrentPage(currentPage + 1);
+                          }
+                        }}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </TabsContent>
             
         )}
@@ -401,14 +607,14 @@ export default function Requests() {
         <TabsContent value="mine" className="space-y-6">
           {requestDemand.length === 0 ? (<Card >
               <CardHeader>
-                <CardTitle>En attente d'approbation</CardTitle>
+                <CardTitle>Mes demandes</CardTitle>
                 <CardDescription>
-                  Demandes nécessitant une action
+                  Vos demandes de bypass
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground text-center py-8">
-                  Aucune demande en attente d'approbation.
+                  Aucune demande.
                 </p>
               </CardContent>
             </Card>) : 
@@ -466,56 +672,222 @@ export default function Requests() {
                   </CardContent>
                 </Card>
 
-                {/* Requests list */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Demandes ({filteredDemand.length})</CardTitle>
-                    <CardDescription>
-                      Liste des demandes de bypass
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {filteredDemand.map((request) => (
-                        <div 
-                          key={request.id} 
-                          className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                {/* Contrôles de pagination et sélection du nombre d'éléments */}
+                {filteredDemand.length > 0 && (
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="items-per-page">Éléments par page:</Label>
+                        <Select 
+                          value={itemsPerPage.toString()} 
+                          onValueChange={(value) => setItemsPerPage(Number(value))}
                         >
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                              {getStatusIcon(request.status)}
-                            </div>
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{request.request_code}</span>
-                                <Badge variant="outline" className={getPriorityColor(request.priority)}>
-                                  {request.priority}
-                                </Badge>
-                                <Badge className={getStatusColor(request.status)}>
-                                  {request.status}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">{request.equipment.name}</p>
-                              <p className="text-xs text-muted-foreground">{request.sensor.name}</p>
-                            </div>
-                          </div>
-                          <div className="text-right space-y-1">
-                            <p className="text-sm font-medium">{request.requester ? request.requester.full_name : 'Moi'}</p>
-                            <p className="text-xs text-muted-foreground">
-                            {new Date(request.created_at).toLocaleString("fr-FR", {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            })}
-                            </p>
-                            
-                            <p className="text-xs text-muted-foreground">{request.description}</p>
-                          </div>
-                          <RequestDetailsModal request={request} />
-                        </div>
-                      ))}
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="3">3</SelectItem>
+                            <SelectItem value="6">6</SelectItem>
+                            <SelectItem value="9">9</SelectItem>
+                            <SelectItem value="12">12</SelectItem>
+                            <SelectItem value="15">15</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-2 border rounded-md p-1">
+                        <Button
+                          variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setViewMode('grid')}
+                          className="h-8"
+                        >
+                          <LayoutGrid className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={viewMode === 'table' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setViewMode('table')}
+                          className="h-8"
+                        >
+                          <TableIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="text-sm text-muted-foreground">
+                      Affichage de {startIndex + 1} à {Math.min(endIndex, filteredDemand.length)} sur {filteredDemand.length} demande{filteredDemand.length > 1 ? 's' : ''}
+                    </div>
+                  </div>
+                )}
+
+                {/* Requests list */}
+                {viewMode === 'grid' ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Demandes ({filteredDemand.length})</CardTitle>
+                      <CardDescription>
+                        Liste des demandes de bypass
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {activeTab === "mine" && paginatedList.length === 0 ? (
+                          <div className="text-center py-8">
+                            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground">Aucune demande trouvée.</p>
+                          </div>
+                        ) : (
+                          activeTab === "mine" && paginatedList.map((request) => (
+                            <div 
+                              key={request.id} 
+                              className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+                                  {getStatusIcon(request.status)}
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{request.request_code}</span>
+                                    <Badge variant="outline" className={getPriorityColor(request.priority)}>
+                                      {request.priority}
+                                    </Badge>
+                                    <Badge className={getStatusColor(request.status)}>
+                                      {request.status}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">{request.equipment.name}</p>
+                                  <p className="text-xs text-muted-foreground">{request.sensor.name}</p>
+                                </div>
+                              </div>
+                              <div className="text-right space-y-1">
+                                <p className="text-sm font-medium">{request.requester ? request.requester.full_name : 'Moi'}</p>
+                                <p className="text-xs text-muted-foreground">
+                                {new Date(request.created_at).toLocaleString("fr-FR", {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                })}
+                                </p>
+                                
+                                <p className="text-xs text-muted-foreground">{request.description}</p>
+                              </div>
+                              <RequestDetailsModal request={request} />
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Demandes ({filteredDemand.length})</CardTitle>
+                      <CardDescription>
+                        Liste des demandes de bypass
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Code</TableHead>
+                            <TableHead>Équipement</TableHead>
+                            <TableHead>Capteur</TableHead>
+                            <TableHead>Priorité</TableHead>
+                            <TableHead>Statut</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {activeTab === "mine" && paginatedList.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center py-8">
+                                <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                                <p className="text-muted-foreground">Aucune demande trouvée.</p>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            activeTab === "mine" && paginatedList.map((request) => (
+                              <TableRow key={request.id}>
+                                <TableCell className="font-medium">{request.request_code}</TableCell>
+                                <TableCell>{request.equipment.name}</TableCell>
+                                <TableCell>{request.sensor.name}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className={getPriorityColor(request.priority)}>
+                                    {request.priority}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={getStatusColor(request.status)}>
+                                    {request.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {new Date(request.created_at).toLocaleString("fr-FR", {
+                                    dateStyle: "medium",
+                                    timeStyle: "short",
+                                  })}
+                                </TableCell>
+                                <TableCell>
+                                  <RequestDetailsModal request={request} />
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Pagination */}
+                {filteredDemand.length > 0 && totalPages > 1 && (
+                  <div className="flex justify-end items-center mt-6 float-right">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (currentPage > 1) {
+                                setCurrentPage(currentPage - 1);
+                              }
+                            }}
+                            className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentPage(page);
+                              }}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext 
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (currentPage < totalPages) {
+                                setCurrentPage(currentPage + 1);
+                              }
+                            }}
+                            className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
               </>
             )}
         </TabsContent>
@@ -591,56 +963,224 @@ export default function Requests() {
                     </CardContent>
                   </Card>
 
-                  {/* Requests list */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Demandes ({filteredApprobation.length})</CardTitle>
-                      <CardDescription>
-                        Liste des demandes de bypass
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {filteredApprobation.map((request) => (
-                          <div 
-                            key={request.id} 
-                            className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                  {/* Contrôles de pagination et sélection du nombre d'éléments */}
+                  {filteredApprobation.length > 0 && (
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="items-per-page">Éléments par page:</Label>
+                          <Select 
+                            value={itemsPerPage.toString()} 
+                            onValueChange={(value) => setItemsPerPage(Number(value))}
                           >
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                                {getStatusIcon(request.status)}
-                              </div>
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{request.request_code}</span>
-                                  <Badge variant="outline" className={getPriorityColor(request.priority)}>
-                                    {request.priority}
-                                  </Badge>
-                                  <Badge className={getStatusColor(request.status)}>
-                                    {request.status}
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">{request.equipment.name}</p>
-                                <p className="text-xs text-muted-foreground">{request.sensor.name}</p>
-                              </div>
-                            </div>
-                            <div className="text-right space-y-1">
-                              <p className="text-sm font-medium">{request.requester.full_name}</p>
-                              <p className="text-xs text-muted-foreground">
-                              {new Date(request.created_at).toLocaleString("fr-FR", {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              })}
-                              </p>
-                              
-                              <p className="text-xs text-muted-foreground">{request.description}</p>
-                            </div>
-                            <RequestDetailsModal request={request} />
-                          </div>
-                        ))}
+                            <SelectTrigger className="w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="3">3</SelectItem>
+                              <SelectItem value="6">6</SelectItem>
+                              <SelectItem value="9">9</SelectItem>
+                              <SelectItem value="12">12</SelectItem>
+                              <SelectItem value="15">15</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-2 border rounded-md p-1">
+                          <Button
+                            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setViewMode('grid')}
+                            className="h-8"
+                          >
+                            <LayoutGrid className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant={viewMode === 'table' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setViewMode('table')}
+                            className="h-8"
+                          >
+                            <TableIcon className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                      <div className="text-sm text-muted-foreground">
+                        Affichage de {startIndex + 1} à {Math.min(endIndex, filteredApprobation.length)} sur {filteredApprobation.length} demande{filteredApprobation.length > 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Requests list */}
+                  {viewMode === 'grid' ? (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Demandes ({filteredApprobation.length})</CardTitle>
+                        <CardDescription>
+                          Liste des demandes de bypass
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {activeTab === "pending" && paginatedList.length === 0 ? (
+                            <div className="text-center py-8">
+                              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                              <p className="text-muted-foreground">Aucune demande trouvée.</p>
+                            </div>
+                          ) : (
+                            activeTab === "pending" && paginatedList.map((request) => (
+                              <div 
+                                key={request.id} 
+                                className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+                                    {getStatusIcon(request.status)}
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">{request.request_code}</span>
+                                      <Badge variant="outline" className={getPriorityColor(request.priority)}>
+                                        {request.priority}
+                                      </Badge>
+                                      <Badge className={getStatusColor(request.status)}>
+                                        {request.status}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">{request.equipment.name}</p>
+                                    <p className="text-xs text-muted-foreground">{request.sensor.name}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right space-y-1">
+                                  <p className="text-sm font-medium">{request.requester.full_name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                  {new Date(request.created_at).toLocaleString("fr-FR", {
+                                    dateStyle: "medium",
+                                    timeStyle: "short",
+                                  })}
+                                  </p>
+                                  
+                                  <p className="text-xs text-muted-foreground">{request.description}</p>
+                                </div>
+                                <RequestDetailsModal request={request} />
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Demandes ({filteredApprobation.length})</CardTitle>
+                        <CardDescription>
+                          Liste des demandes de bypass
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Code</TableHead>
+                              <TableHead>Équipement</TableHead>
+                              <TableHead>Capteur</TableHead>
+                              <TableHead>Demandeur</TableHead>
+                              <TableHead>Priorité</TableHead>
+                              <TableHead>Statut</TableHead>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {activeTab === "pending" && paginatedList.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={8} className="text-center py-8">
+                                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                                  <p className="text-muted-foreground">Aucune demande trouvée.</p>
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              activeTab === "pending" && paginatedList.map((request) => (
+                                <TableRow key={request.id}>
+                                  <TableCell className="font-medium">{request.request_code}</TableCell>
+                                  <TableCell>{request.equipment.name}</TableCell>
+                                  <TableCell>{request.sensor.name}</TableCell>
+                                  <TableCell>{request.requester.full_name}</TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className={getPriorityColor(request.priority)}>
+                                      {request.priority}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge className={getStatusColor(request.status)}>
+                                      {request.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    {new Date(request.created_at).toLocaleString("fr-FR", {
+                                      dateStyle: "medium",
+                                      timeStyle: "short",
+                                    })}
+                                  </TableCell>
+                                  <TableCell>
+                                    <RequestDetailsModal request={request} />
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Pagination */}
+                  {filteredApprobation.length > 0 && totalPages > 1 && (
+                    <div className="flex justify-end items-center mt-6 float-right">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (currentPage > 1) {
+                                  setCurrentPage(currentPage - 1);
+                                }
+                              }}
+                              className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(page);
+                                }}
+                                isActive={currentPage === page}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ))}
+                          <PaginationItem>
+                            <PaginationNext 
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (currentPage < totalPages) {
+                                  setCurrentPage(currentPage + 1);
+                                }
+                              }}
+                              className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
                 </>
               )}
             </TabsContent>
@@ -648,14 +1188,14 @@ export default function Requests() {
             <TabsContent value="active" className="space-y-6">
             {requestActifs.length === 0 ? (<Card >
                 <CardHeader>
-                  <CardTitle>En attente d'approbation</CardTitle>
+                  <CardTitle>Bypass actifs</CardTitle>
                   <CardDescription>
-                    Demandes nécessitant une action
+                    Demandes de bypass actuellement actives
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-center py-8">
-                    Aucune demande en attente d'approbation.
+                    Aucun bypass actif.
                   </p>
                 </CardContent>
               </Card>) : 
@@ -713,56 +1253,224 @@ export default function Requests() {
                     </CardContent>
                   </Card>
 
-                  {/* Requests list */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Demandes ({filteredActifs.length})</CardTitle>
-                      <CardDescription>
-                        Liste des demandes de bypass
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {filteredActifs.map((request) => (
-                          <div 
-                            key={request.id} 
-                            className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                  {/* Contrôles de pagination et sélection du nombre d'éléments */}
+                  {filteredActifs.length > 0 && (
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="items-per-page">Éléments par page:</Label>
+                          <Select 
+                            value={itemsPerPage.toString()} 
+                            onValueChange={(value) => setItemsPerPage(Number(value))}
                           >
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                                {getStatusIcon(request.status)}
-                              </div>
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{request.request_code}</span>
-                                  <Badge variant="outline" className={getPriorityColor(request.priority)}>
-                                    {request.priority}
-                                  </Badge>
-                                  <Badge className={getStatusColor(request.status)}>
-                                    {request.status}
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">{request.equipment.name}</p>
-                                <p className="text-xs text-muted-foreground">{request.sensor.name}</p>
-                              </div>
-                            </div>
-                            <div className="text-right space-y-1">
-                              <p className="text-sm font-medium">{request.requester.full_name}</p>
-                              <p className="text-xs text-muted-foreground">
-                              {new Date(request.created_at).toLocaleString("fr-FR", {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              })}
-                              </p>
-                              
-                              <p className="text-xs text-muted-foreground">{request.description}</p>
-                            </div>
-                            <RequestDetailsModal request={request} />
-                          </div>
-                        ))}
+                            <SelectTrigger className="w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="3">3</SelectItem>
+                              <SelectItem value="6">6</SelectItem>
+                              <SelectItem value="9">9</SelectItem>
+                              <SelectItem value="12">12</SelectItem>
+                              <SelectItem value="15">15</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-2 border rounded-md p-1">
+                          <Button
+                            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setViewMode('grid')}
+                            className="h-8"
+                          >
+                            <LayoutGrid className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant={viewMode === 'table' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setViewMode('table')}
+                            className="h-8"
+                          >
+                            <TableIcon className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                      <div className="text-sm text-muted-foreground">
+                        Affichage de {startIndex + 1} à {Math.min(endIndex, filteredActifs.length)} sur {filteredActifs.length} demande{filteredActifs.length > 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Requests list */}
+                  {viewMode === 'grid' ? (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Demandes ({filteredActifs.length})</CardTitle>
+                        <CardDescription>
+                          Liste des demandes de bypass
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {activeTab === "active" && paginatedList.length === 0 ? (
+                            <div className="text-center py-8">
+                              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                              <p className="text-muted-foreground">Aucune demande trouvée.</p>
+                            </div>
+                          ) : (
+                            activeTab === "active" && paginatedList.map((request) => (
+                              <div 
+                                key={request.id} 
+                                className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+                                    {getStatusIcon(request.status)}
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">{request.request_code}</span>
+                                      <Badge variant="outline" className={getPriorityColor(request.priority)}>
+                                        {request.priority}
+                                      </Badge>
+                                      <Badge className={getStatusColor(request.status)}>
+                                        {request.status}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">{request.equipment.name}</p>
+                                    <p className="text-xs text-muted-foreground">{request.sensor.name}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right space-y-1">
+                                  <p className="text-sm font-medium">{request.requester.full_name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                  {new Date(request.created_at).toLocaleString("fr-FR", {
+                                    dateStyle: "medium",
+                                    timeStyle: "short",
+                                  })}
+                                  </p>
+                                  
+                                  <p className="text-xs text-muted-foreground">{request.description}</p>
+                                </div>
+                                <RequestDetailsModal request={request} />
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Demandes ({filteredActifs.length})</CardTitle>
+                        <CardDescription>
+                          Liste des demandes de bypass
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Code</TableHead>
+                              <TableHead>Équipement</TableHead>
+                              <TableHead>Capteur</TableHead>
+                              <TableHead>Demandeur</TableHead>
+                              <TableHead>Priorité</TableHead>
+                              <TableHead>Statut</TableHead>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {activeTab === "active" && paginatedList.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={8} className="text-center py-8">
+                                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                                  <p className="text-muted-foreground">Aucune demande trouvée.</p>
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              activeTab === "active" && paginatedList.map((request) => (
+                                <TableRow key={request.id}>
+                                  <TableCell className="font-medium">{request.request_code}</TableCell>
+                                  <TableCell>{request.equipment.name}</TableCell>
+                                  <TableCell>{request.sensor.name}</TableCell>
+                                  <TableCell>{request.requester.full_name}</TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className={getPriorityColor(request.priority)}>
+                                      {request.priority}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge className={getStatusColor(request.status)}>
+                                      {request.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    {new Date(request.created_at).toLocaleString("fr-FR", {
+                                      dateStyle: "medium",
+                                      timeStyle: "short",
+                                    })}
+                                  </TableCell>
+                                  <TableCell>
+                                    <RequestDetailsModal request={request} />
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Pagination */}
+                  {filteredActifs.length > 0 && totalPages > 1 && (
+                    <div className="flex justify-end items-center mt-6 float-right">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (currentPage > 1) {
+                                  setCurrentPage(currentPage - 1);
+                                }
+                              }}
+                              className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(page);
+                                }}
+                                isActive={currentPage === page}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ))}
+                          <PaginationItem>
+                            <PaginationNext 
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (currentPage < totalPages) {
+                                  setCurrentPage(currentPage + 1);
+                                }
+                              }}
+                              className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
                 </>
               )}
             </TabsContent>

@@ -139,16 +139,84 @@ export const ProfileCard = ({ user }: ProfileCardProps) => {
                 Exporter les données
               </div>
             )}
-            {permissions.canManageEquipment && (
-              <div className="flex items-center text-sm text-yellow-700 bg-yellow-50 px-2 py-1 rounded">
-                <Settings className="h-3 w-3 mr-2" />
-                Gérer les équipements
-              </div>
-            )}
             {permissions.canViewAuditLog && (
               <div className="flex items-center text-sm text-gray-700 bg-gray-50 px-2 py-1 rounded">
                 <FileText className="h-3 w-3 mr-2" />
                 Journal d'audit
+              </div>
+            )}
+            {(permissions.canViewEquipment || permissions.canCreateEquipment || permissions.canUpdateEquipment || permissions.canDeleteEquipment) && (
+              <div className="flex items-center text-sm text-yellow-700 bg-yellow-50 px-2 py-1 rounded">
+                <Settings className="h-3 w-3 mr-2" />
+                Équipements ({[
+                  permissions.canViewEquipment && 'Voir',
+                  permissions.canCreateEquipment && 'Créer',
+                  permissions.canUpdateEquipment && 'Modifier',
+                  permissions.canDeleteEquipment && 'Supprimer'
+                ].filter(Boolean).join(', ')})
+              </div>
+            )}
+            {(permissions.canViewUser || permissions.canCreateUser || permissions.canUpdateUser || permissions.canDeleteUser) && (
+              <div className="flex items-center text-sm text-indigo-700 bg-indigo-50 px-2 py-1 rounded">
+                <Users className="h-3 w-3 mr-2" />
+                Utilisateurs ({[
+                  permissions.canViewUser && 'Voir',
+                  permissions.canCreateUser && 'Créer',
+                  permissions.canUpdateUser && 'Modifier',
+                  permissions.canDeleteUser && 'Supprimer'
+                ].filter(Boolean).join(', ')})
+              </div>
+            )}
+            {(permissions.canViewZone || permissions.canCreateZone || permissions.canUpdateZone || permissions.canDeleteZone) && (
+              <div className="flex items-center text-sm text-teal-700 bg-teal-50 px-2 py-1 rounded">
+                <Settings className="h-3 w-3 mr-2" />
+                Zones ({[
+                  permissions.canViewZone && 'Voir',
+                  permissions.canCreateZone && 'Créer',
+                  permissions.canUpdateZone && 'Modifier',
+                  permissions.canDeleteZone && 'Supprimer'
+                ].filter(Boolean).join(', ')})
+              </div>
+            )}
+            {(permissions.canViewSensor || permissions.canCreateSensor || permissions.canUpdateSensor || permissions.canDeleteSensor) && (
+              <div className="flex items-center text-sm text-cyan-700 bg-cyan-50 px-2 py-1 rounded">
+                <Settings className="h-3 w-3 mr-2" />
+                Capteurs ({[
+                  permissions.canViewSensor && 'Voir',
+                  permissions.canCreateSensor && 'Créer',
+                  permissions.canUpdateSensor && 'Modifier',
+                  permissions.canDeleteSensor && 'Supprimer'
+                ].filter(Boolean).join(', ')})
+              </div>
+            )}
+            {permissions.canManageSettings && (
+              <div className="flex items-center text-sm text-pink-700 bg-pink-50 px-2 py-1 rounded">
+                <Settings className="h-3 w-3 mr-2" />
+                Gérer les paramètres
+              </div>
+            )}
+            {permissions.canRejectRequest && (
+              <div className="flex items-center text-sm text-red-700 bg-red-50 px-2 py-1 rounded">
+                <AlertTriangle className="h-3 w-3 mr-2" />
+                Rejeter des demandes
+              </div>
+            )}
+            {permissions.canCancelRequest && (
+              <div className="flex items-center text-sm text-red-700 bg-red-50 px-2 py-1 rounded">
+                <AlertTriangle className="h-3 w-3 mr-2" />
+                Annuler des demandes
+              </div>
+            )}
+            {permissions.canViewDashboard && (
+              <div className="flex items-center text-sm text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                <FileText className="h-3 w-3 mr-2" />
+                Voir le tableau de bord
+              </div>
+            )}
+            {permissions.canManageRoles && (
+              <div className="flex items-center text-sm text-violet-700 bg-violet-50 px-2 py-1 rounded">
+                <Shield className="h-3 w-3 mr-2" />
+                Gérer les rôles
               </div>
             )}
           </div>

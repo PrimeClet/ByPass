@@ -3,7 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { 
   History as HistoryIcon,
   Search,
@@ -18,7 +21,9 @@ import {
   Plus,
   FileText,
   AlertTriangle,
-  ArrowLeft
+  ArrowLeft,
+  LayoutGrid,
+  Table as TableIcon
 } from "lucide-react"
 import { useLocation, Link } from "react-router-dom"
 import api from '../axios'
@@ -31,6 +36,9 @@ export default function History() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [dateFilter, setDateFilter] = useState("all")
   const [requestList, setRequestList] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(3);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   const filteredHistory = (requestList ?? []).filter(item => {
     const matchesSearch = item.equipment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -41,6 +49,17 @@ export default function History() {
     
     return matchesSearch && matchesStatus
   })
+
+  // Calcul de la pagination
+  const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedHistory = filteredHistory.slice(startIndex, endIndex);
+
+  // Réinitialiser la page quand les filtres ou le nombre d'éléments par page changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, dateFilter, itemsPerPage]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -177,103 +196,291 @@ export default function History() {
         </CardContent>
       </Card>
 
-      {/* History list */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <HistoryIcon className="w-5 h-5" />
-            Historique ({filteredHistory.length})
-          </CardTitle>
-          <CardDescription>
-            Toutes les demandes traitées
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredHistory.map((item) => (
-              <div 
-                key={item.id} 
-                className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+      {/* Contrôles de pagination et sélection du nombre d'éléments */}
+      {filteredHistory.length > 0 && (
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="items-per-page">Éléments par page:</Label>
+              <Select 
+                value={itemsPerPage.toString()} 
+                onValueChange={(value) => setItemsPerPage(Number(value))}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                      {getStatusIcon(item.status)}
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="6">6</SelectItem>
+                  <SelectItem value="9">9</SelectItem>
+                  <SelectItem value="12">12</SelectItem>
+                  <SelectItem value="15">15</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2 border rounded-md p-1">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="h-8"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className="h-8"
+              >
+                <TableIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Affichage de {startIndex + 1} à {Math.min(endIndex, filteredHistory.length)} sur {filteredHistory.length} demande{filteredHistory.length > 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
+
+      {/* History list */}
+      {viewMode === 'grid' ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <HistoryIcon className="w-5 h-5" />
+              Historique ({filteredHistory.length})
+            </CardTitle>
+            <CardDescription>
+              Toutes les demandes traitées
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {paginatedHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <HistoryIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">
+                    {requestList.length === 0 ? 'Aucune demande' : 'Aucun résultat'}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {requestList.length === 0 
+                      ? 'Aucune demande dans l\'historique.'
+                      : 'Aucune demande ne correspond à vos critères de recherche.'
+                    }
+                  </p>
+                </div>
+              ) : (
+                paginatedHistory.map((item) => (
+                  <div 
+                    key={item.id} 
+                    className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+                          {getStatusIcon(item.status)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium">{item.request_code}</span>
+                            <Badge className={getStatusColor(item.status)}>
+                              {item.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{item.equipment.name}</p>
+                          <p className="text-xs text-muted-foreground">{item.sensor.name}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium">{item.request_code}</span>
+
+                    <div className="grid gap-3 md:grid-cols-3 text-sm">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <User className="w-4 h-4" />
+                          <span>Demandeur:</span>
+                        </div>
+                        <p>{item.requester.full_name}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar className="w-4 h-4" />
+                          <span>Demande:</span>
+                        </div>
+                        <p>
+                        {new Date(item.created_at).toLocaleString("fr-FR", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Validation:</span>
+                        </div>
+                        <p>
+                        {new Date(item.validated_at).toLocaleString("fr-FR", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex items-center justify-between text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Validateur: </span>
+                          <span className="font-medium">{item.validator?.full_name}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Durée: </span>
+                          <span className="font-medium">{diffInHours(item.end_time, item.start_time)} Heures</span>
+                        </div>
+                      </div>
+                      {item.comments && (
+                        <div className="mt-2">
+                          <span className="text-muted-foreground text-xs">Commentaires: </span>
+                          <p className="text-xs text-muted-foreground italic">{item.commentaires}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <HistoryIcon className="w-5 h-5" />
+              Historique ({filteredHistory.length})
+            </CardTitle>
+            <CardDescription>
+              Toutes les demandes traitées
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Équipement</TableHead>
+                  <TableHead>Capteur</TableHead>
+                  <TableHead>Demandeur</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead>Date demande</TableHead>
+                  <TableHead>Date validation</TableHead>
+                  <TableHead>Validateur</TableHead>
+                  <TableHead>Durée</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedHistory.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8">
+                      <HistoryIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">
+                        {requestList.length === 0 ? 'Aucune demande' : 'Aucun résultat'}
+                      </h3>
+                      <p className="text-muted-foreground">
+                        {requestList.length === 0 
+                          ? 'Aucune demande dans l\'historique.'
+                          : 'Aucune demande ne correspond à vos critères de recherche.'
+                        }
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedHistory.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">
+                        {item.request_code}
+                      </TableCell>
+                      <TableCell>{item.equipment.name}</TableCell>
+                      <TableCell>{item.sensor.name}</TableCell>
+                      <TableCell>{item.requester.full_name}</TableCell>
+                      <TableCell>
                         <Badge className={getStatusColor(item.status)}>
                           {item.status}
                         </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{item.equipment.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.sensor.name}</p>
-                    </div>
-                  </div>
-                  {/* <Button variant="outline" size="sm">
-                    <Eye className="w-4 h-4 mr-2" />
-                    Détails
-                  </Button> */}
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-3 text-sm">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <User className="w-4 h-4" />
-                      <span>Demandeur:</span>
-                    </div>
-                    <p>{item.requester.full_name}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="w-4 h-4" />
-                      <span>Demande:</span>
-                    </div>
-                    <p>
-                    {new Date(item.created_at).toLocaleString("fr-FR", {
+                      </TableCell>
+                      <TableCell>
+                        {new Date(item.created_at).toLocaleString("fr-FR", {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <CheckCircle className="w-4 h-4" />
-                      <span>Validation:</span>
-                    </div>
-                    <p>
-                    {new Date(item.validated_at).toLocaleString("fr-FR", {
+                      </TableCell>
+                      <TableCell>
+                        {new Date(item.validated_at).toLocaleString("fr-FR", {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}
-                    </p>
-                  </div>
-                </div>
+                      </TableCell>
+                      <TableCell>{item.validator?.full_name || 'N/A'}</TableCell>
+                      <TableCell>
+                        {diffInHours(item.end_time, item.start_time)} Heures
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
-                <div className="mt-3 pt-3 border-t">
-                  <div className="flex items-center justify-between text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Validateur: </span>
-                      <span className="font-medium">{item.validator?.full_name}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Durée: </span>
-                      <span className="font-medium">{diffInHours(item.end_time, item.start_time)} Heures</span>
-                    </div>
-                  </div>
-                  {item.comments && (
-                    <div className="mt-2">
-                      <span className="text-muted-foreground text-xs">Commentaires: </span>
-                      <p className="text-xs text-muted-foreground italic">{item.commentaires}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Pagination */}
+      {filteredHistory.length > 0 && totalPages > 1 && (
+        <div className="flex justify-end items-center mt-6 float-right">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                      setCurrentPage(currentPage - 1);
+                    }
+                  }}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCurrentPage(page);
+                    }}
+                    isActive={currentPage === page}
+                    className="cursor-pointer"
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                      setCurrentPage(currentPage + 1);
+                    }
+                  }}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
   )
 }
