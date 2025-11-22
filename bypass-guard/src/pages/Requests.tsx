@@ -165,18 +165,21 @@ export default function Requests() {
   useEffect(() => {
     
 
-    if(user.role === 'administrator' || user.role === 'supervisor'){
-        api.get('/dashboard/recent-requests')
+    if(user.role === 'administrator'){
+        // Pour l'administrateur, récupérer toutes les demandes du système
+        api.get('/requests')
         .then(response => {
           // Handle successful response
-          console.log(response.data); // The fetched data is typically in response.data
-          setRequestList(response.data)    
+          // L'API retourne une pagination : {data: [...], ...}
+          setRequestList(response.data.data || response.data)    
         })
         .catch(error => {
           // Handle error
           console.error('Error fetching data:', error);
         });
+    }
 
+    if(user.role === 'administrator' || user.role === 'supervisor'){
         api.get('/requests/pending')
         .then(response => {
           // Handle successful response

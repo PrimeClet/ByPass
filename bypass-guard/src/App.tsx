@@ -22,6 +22,7 @@ import Sensors from "./pages/Sensors";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import RolesPermissions from "./pages/RolesPermissions";
+import Terms from "./pages/Terms";
 
 const queryClient = new QueryClient();
 
@@ -117,6 +118,11 @@ const App = () => (
             <Route path="/roles-permissions" element={
               <ProtectedRoute  allowedRoles={['administrator']}>
                 <Layout><RolesPermissions /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/terms" element={
+              <ProtectedRoute  allowedRoles={['administrator', 'supervisor', 'user', 'director']}>
+                <Layout><Terms /></Layout>
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

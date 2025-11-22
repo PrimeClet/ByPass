@@ -9,7 +9,8 @@ import {
   FileText,
   Activity,
   TrendingUp,
-  Shield
+  Shield,
+  ArrowRight
 } from "lucide-react"
 import { cva } from "class-variance-authority";
 import { useState, useEffect } from 'react';
@@ -210,17 +211,19 @@ export default function Dashboard() {
       <div className="grid gap-6 md:grid-cols-2">
         {/* Recent requests */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              Demandes récentes
-            </CardTitle>
-            <CardDescription>
-              Les dernières demandes de bypass soumises
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="w-5 h-5" />
+                Demandes récentes
+              </CardTitle>
+              <CardDescription>
+                Les dernières demandes de bypass soumises
+              </CardDescription>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {requestList?.map((request) => (
+            {requestList?.slice(0, 3).map((request) => (
               <div key={request.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -240,6 +243,14 @@ export default function Dashboard() {
                 </div>
               </div>
             ))}
+            <div className="pt-2 border-t">
+              <Button variant="ghost" className="w-full justify-center" asChild>
+                <Link to="/requests">
+                  Voir toutes les demandes
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
