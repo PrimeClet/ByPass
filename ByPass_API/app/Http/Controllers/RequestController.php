@@ -388,6 +388,22 @@ class RequestController extends Controller
             'rejection_reason' => $data['rejection_reason'] ?? null,
         ]);
 
+        // Si la requête est approuvée, désactiver le capteur
+        if ($data['validation_status'] === 'approved') {
+            $sensor = $request->sensor;
+            if ($sensor) {
+                $sensor->update(['status' => 'inactive']);
+                
+                AuditLog::log(
+                    'Sensor Deactivated',
+                    auth()->user(),
+                    'Sensor',
+                    $sensor->id,
+                    ['reason' => 'Bypass request approved', 'request_id' => $request->id]
+                );
+            }
+        }
+        
         AuditLog::log(
             'Request ' . ucfirst($data['validation_status']),
             auth()->user(),
