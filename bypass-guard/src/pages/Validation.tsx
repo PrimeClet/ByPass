@@ -190,18 +190,18 @@ export default function Validation() {
   }, [itemsPerPage]);
 
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Centre de validation</h1>
-          <p className="text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 min-w-0 box-border">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words">Centre de validation</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground break-words">
             Validation hiérarchique des demandes de bypass
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Badge variant="outline" className="flex items-center gap-2 text-xs sm:text-sm">
+            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             {requestApprobation.length} en attente
           </Badge>
         </div>
@@ -209,14 +209,14 @@ export default function Validation() {
 
       {/* Contrôles de pagination et sélection du nombre d'éléments */}
       {requestApprobation.length > 0 && (
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="items-per-page">Éléments par page:</Label>
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mt-3 sm:mt-4 w-full min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <Label htmlFor="items-per-page" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Éléments par page:</Label>
             <Select 
               value={itemsPerPage.toString()} 
               onValueChange={(value) => setItemsPerPage(Number(value))}
             >
-              <SelectTrigger className="w-24">
+              <SelectTrigger className="w-16 sm:w-20 flex-shrink-0 h-8 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -228,47 +228,47 @@ export default function Validation() {
               </SelectContent>
             </Select>
           </div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-xs text-muted-foreground text-center sm:text-right">
             Affichage de {startIndex + 1} à {Math.min(endIndex, requestApprobation.length)} sur {requestApprobation.length} demande{requestApprobation.length > 1 ? 's' : ''}
           </div>
         </div>
       )}
 
       {/* Pending requests */}
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {paginatedRequests.map((request) => (
-          <Card key={request.request_code} className="overflow-hidden">
-            <CardHeader className="bg-muted/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-warning" />
-                    {request.request_code}
+          <Card key={request.request_code} className="overflow-hidden w-full box-border">
+            <CardHeader className="bg-muted/50 p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 min-w-0">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-warning shrink-0" />
+                    <span className="truncate">{request.request_code}</span>
                   </CardTitle>
-                  <CardDescription className="mt-1">
+                  <CardDescription className="mt-1 text-xs sm:text-sm truncate">
                     {request.equipment.name} - {request.sensor.name}
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={getPriorityColor(request.priority)}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs"}>
                     {request.priority}
                   </Badge>
-                  <Badge variant="outline" className={getRiskColor(request.impact_securite)}>
+                  <Badge variant="outline" className={getRiskColor(request.impact_securite) + " text-xs"}>
                     Risque {request.impact_securite}
                   </Badge>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-6 space-y-6">
+            <CardContent className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
               {/* Request details */}
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="space-y-2">
                   <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Demandeur
                   </Label>
                   <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">{request.requester.full_name}</span>
+                    <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs sm:text-sm truncate">{request.requester.full_name}</span>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -276,8 +276,8 @@ export default function Validation() {
                     Date de demande
                   </Label>
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">
+                    <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs sm:text-sm">
                     {new Date(request.created_at).toLocaleString("fr-FR", {
                           dateStyle: "medium",
                           timeStyle: "short",
@@ -290,8 +290,8 @@ export default function Validation() {
                     Raison
                   </Label>
                   <div className="flex items-center gap-2">
-                    <Settings className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">{ getMaintenanceLabel(request.title) }</span>
+                    <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs sm:text-sm truncate">{ getMaintenanceLabel(request.title) }</span>
                   </div>
                 </div>
               </div>
@@ -301,7 +301,7 @@ export default function Validation() {
                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Planification
                 </Label>
-                <div className="flex items-center gap-4 text-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm">
                   <span>Début: 
                   {new Date(request.start_time).toLocaleString("fr-FR", {
                           dateStyle: "medium",
@@ -322,7 +322,7 @@ export default function Validation() {
                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Description détaillée
                 </Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {request.description}
                 </p>
               </div>
@@ -348,7 +348,7 @@ export default function Validation() {
                 </Label>
                 <Textarea
                   id={`comment-${request.request_code}`}
-                  className="min-h-[100px]"
+                  className="min-h-[80px] sm:min-h-[100px] text-sm"
                   placeholder="Expliquez la raison du rejet... Ecrire (RAS) au cas contraire"
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
@@ -356,31 +356,27 @@ export default function Validation() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t">
-                <Button variant="outline" className="flex items-center gap-2"
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-3 sm:pt-4 border-t">
+                <Button variant="outline" className="flex items-center gap-2 w-full sm:w-auto text-sm"
                   onClick={() => {
                     acceptedRequest(request.id, { 
                       validation_status: "rejected", 
                       rejection_reason: rejectionReason 
                     })
-                    // setRejectModalOpen(false)
-                    // setOpen(false)
                   }}
                 >
-                  <XCircle className="w-4 h-4" />
+                  <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Rejeter
                 </Button>
-                <Button variant="success" className="flex items-center gap-2"
+                <Button variant="success" className="flex items-center gap-2 w-full sm:w-auto text-sm"
                   onClick={() => {
                     acceptedRequest(request.id, { 
                       validation_status: "approved", 
                       rejection_reason: rejectionReason 
                     })
-                    // setRejectModalOpen(false)
-                    // setOpen(false)
                   }}
                 >
-                  <CheckCircle className="w-4 h-4" />
+                  <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Approuver
                 </Button>
               </div>
@@ -391,11 +387,11 @@ export default function Validation() {
 
       {/* Empty state */}
       {requestApprobation.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <CheckCircle className="w-12 h-12 text-success mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Aucune demande en attente</h3>
-            <p className="text-muted-foreground">
+        <Card className="w-full box-border">
+          <CardContent className="text-center py-6 sm:py-12 p-3 sm:p-6">
+            <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-success mx-auto mb-4" />
+            <h3 className="text-base sm:text-lg font-semibold mb-2">Aucune demande en attente</h3>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Toutes les demandes ont été traitées.
             </p>
           </CardContent>
@@ -404,9 +400,9 @@ export default function Validation() {
 
       {/* Pagination */}
       {requestApprobation.length > 0 && totalPages > 1 && (
-        <div className="flex justify-end items-center mt-6 float-right">
+        <div className="flex justify-center sm:justify-end items-center mt-4 sm:mt-6 w-full min-w-0 overflow-x-hidden">
           <Pagination>
-            <PaginationContent>
+            <PaginationContent className="flex-wrap min-w-0">
               <PaginationItem>
                 <PaginationPrevious 
                   href="#"

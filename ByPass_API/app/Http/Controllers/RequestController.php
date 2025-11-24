@@ -655,9 +655,19 @@ class RequestController extends Controller
 
     public function markAsRead(Request $request, $id)
     {
-        $notification = auth()->user()->unreadNotifications->find($id);
-        $notification->markAsRead();
+        $notification = auth()->user()->notifications()->find($id);
+        
+        if (!$notification) {
+            return response()->json(['message' => 'Notification non trouvée'], 404);
+        }
 
-        return back()->with('success', 'Added Mark as read.');
+        if (!$notification->read_at) {
+            $notification->markAsRead();
+        }
+
+        return response()->json([
+            'message' => 'Notification marquée comme lue',
+            'notification' => $notification
+        ]);
     }
 }

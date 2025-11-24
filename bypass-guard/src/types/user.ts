@@ -2,14 +2,16 @@ export type UserRole = 'user' | 'supervisor' | 'director' | 'administrator';
 
 export interface User {
   id: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
+  full_name?: string;
+  username?: string;
   email: string;
   role: UserRole;
-  department: string;
-  zone: string;
+  department?: string;
+  zone?: string;
   phone?: string;
-  employeeId: string;
+  employeeId?: string;
   isActive: boolean;
   lastLogin?: Date;
 }

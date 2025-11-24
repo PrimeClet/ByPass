@@ -12,7 +12,8 @@ import {
   ChevronDown,
   Users,
   Activity,
-  Key
+  Key,
+  UserCircle
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
@@ -90,17 +91,13 @@ const adminItems = [
     badge: null,
     role: ['administrator']
   },
+]
+
+const userRoleItems = [
   {
     title: "Utilisateurs",
     url: "/users",
     icon: Users,
-    badge: null,
-    role: ['administrator']
-  },
-  {
-    title: "Paramètres",
-    url: "/settings",
-    icon: Settings,
     badge: null,
     role: ['administrator']
   },
@@ -113,8 +110,32 @@ const adminItems = [
   },
 ]
 
+const settingsItems = [
+  {
+    title: "Paramètres",
+    url: "/settings",
+    icon: Settings,
+    badge: null,
+    role: ['administrator']
+  },
+  {
+    title: "Mon profil",
+    url: "/profile",
+    icon: UserCircle,
+    badge: null,
+    role: ['administrator', 'supervisor', 'user', 'director']
+  },
+  {
+    title: "Conditions d'utilisation",
+    url: "/terms",
+    icon: FileText,
+    badge: null,
+    role: ['administrator', 'supervisor', 'user', 'director']
+  },
+]
+
 export function AppSidebar() {
-  const { state } = useSidebar()
+  const { state, setOpen, setOpenMobile, isMobile } = useSidebar()
   const collapsed = state === "collapsed"
   const location = useLocation()
   const currentPath = location.pathname
@@ -125,6 +146,29 @@ export function AppSidebar() {
 
   const dispatch = useDispatch<AppDispatch>();
   const { users, loading, error, user, token } = useSelector((state: RootState) => state.user);
+
+  // Détecter les écrans moyens (entre 768px et 1024px)
+  const [isMediumScreen, setIsMediumScreen] = useState(false)
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const width = window.innerWidth
+      setIsMediumScreen(width >= 768 && width < 1024)
+    }
+
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+    return () => window.removeEventListener('resize', checkScreenSize)
+  }, [])
+
+  // Fonction pour fermer la sidebar sur les écrans moyens
+  const handleLinkClick = () => {
+    if (isMediumScreen && !isMobile) {
+      setOpen(false)
+    } else if (isMobile) {
+      setOpenMobile(false)
+    }
+  }
   
 
   const menuItems = [
@@ -240,6 +284,7 @@ export function AppSidebar() {
                               <NavLink 
                                 to={subItem.url} 
                                 className={({ isActive }) => getNavClass(isActive)}
+                                onClick={handleLinkClick}
                               >
                                 <subItem.icon className="w-4 h-4" />
                                 <span className="text-sm">{subItem.title}</span>
@@ -259,6 +304,7 @@ export function AppSidebar() {
                       <NavLink 
                         to={item.url} 
                         className={({ isActive }) => getNavClass(isActive)}
+                        onClick={handleLinkClick}
                       >
                         <item.icon className="w-4 h-4" />
                         {!collapsed && (
@@ -283,7 +329,7 @@ export function AppSidebar() {
         {
           (user.role === 'administrator') &&
 
-          <SidebarGroup className="mt-8">
+          <SidebarGroup className="mt-4">
           <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs font-medium uppercase tracking-wider">
             Administration
           </SidebarGroupLabel>
@@ -297,6 +343,7 @@ export function AppSidebar() {
                     <NavLink 
                       to={item.url} 
                       className={({ isActive }) => getNavClass(isActive)}
+                      onClick={handleLinkClick}
                     >
                       <item.icon className="w-4 h-4" />
                       {!collapsed && (
@@ -317,6 +364,80 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       }
+
+      {
+        (user.role === 'administrator') &&
+
+        <SidebarGroup className="mt-4">
+          <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs font-medium uppercase tracking-wider">
+            Utilisateurs et accès
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {userRoleItems
+              .filter((item) => item.role.includes(user.role))
+              .map((item) => (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.url} 
+                      className={({ isActive }) => getNavClass(isActive)}
+                      onClick={handleLinkClick}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      {!collapsed && (
+                        <>
+                          <span className="text-sm">{item.title}</span>
+                          {item.badge && (
+                            <Badge variant="secondary" className="ml-auto text-xs">
+                              {item.badge}
+                            </Badge>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      }
+
+      <SidebarGroup className="mt-4">
+        <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs font-medium uppercase tracking-wider">
+          Compte et paramètres
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu className="space-y-1">
+            {settingsItems
+            .filter((item) => item.role.includes(user.role))
+            .map((item) => (
+              <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton asChild>
+                  <NavLink 
+                    to={item.url} 
+                    className={({ isActive }) => getNavClass(isActive)}
+                    onClick={handleLinkClick}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {!collapsed && (
+                      <>
+                        <span className="text-sm">{item.title}</span>
+                        {item.badge && (
+                          <Badge variant="secondary" className="ml-auto text-xs">
+                            {item.badge}
+                          </Badge>
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border/50 p-4">
