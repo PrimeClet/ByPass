@@ -11,7 +11,9 @@ import {
   Shield,
   ChevronDown,
   Users,
-  Activity
+  Activity,
+  Key,
+  UserCircle
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
@@ -89,6 +91,9 @@ const adminItems = [
     badge: null,
     role: ['administrator']
   },
+]
+
+const userRoleItems = [
   {
     title: "Utilisateurs",
     url: "/users",
@@ -97,11 +102,35 @@ const adminItems = [
     role: ['administrator']
   },
   {
+    title: "Rôles et Permissions",
+    url: "/roles-permissions",
+    icon: Key,
+    badge: null,
+    role: ['administrator']
+  },
+]
+
+const settingsItems = [
+  {
     title: "Paramètres",
     url: "/settings",
     icon: Settings,
     badge: null,
     role: ['administrator']
+  },
+  {
+    title: "Mon profil",
+    url: "/profile",
+    icon: UserCircle,
+    badge: null,
+    role: ['administrator', 'supervisor', 'user', 'director']
+  },
+  {
+    title: "Conditions d'utilisation",
+    url: "/terms",
+    icon: FileText,
+    badge: null,
+    role: ['administrator', 'supervisor', 'user', 'director']
   },
 ]
 
@@ -275,7 +304,7 @@ export function AppSidebar() {
         {
           (user.role === 'administrator') &&
 
-          <SidebarGroup className="mt-8">
+          <SidebarGroup className="mt-4">
           <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs font-medium uppercase tracking-wider">
             Administration
           </SidebarGroupLabel>
@@ -309,6 +338,78 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       }
+
+      {
+        (user.role === 'administrator') &&
+
+        <SidebarGroup className="mt-4">
+          <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs font-medium uppercase tracking-wider">
+            Utilisateurs et accès
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {userRoleItems
+              .filter((item) => item.role.includes(user.role))
+              .map((item) => (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.url} 
+                      className={({ isActive }) => getNavClass(isActive)}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      {!collapsed && (
+                        <>
+                          <span className="text-sm">{item.title}</span>
+                          {item.badge && (
+                            <Badge variant="secondary" className="ml-auto text-xs">
+                              {item.badge}
+                            </Badge>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      }
+
+      <SidebarGroup className="mt-4">
+        <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs font-medium uppercase tracking-wider">
+          Compte et paramètres
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu className="space-y-1">
+            {settingsItems
+            .filter((item) => item.role.includes(user.role))
+            .map((item) => (
+              <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton asChild>
+                  <NavLink 
+                    to={item.url} 
+                    className={({ isActive }) => getNavClass(isActive)}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {!collapsed && (
+                      <>
+                        <span className="text-sm">{item.title}</span>
+                        {item.badge && (
+                          <Badge variant="secondary" className="ml-auto text-xs">
+                            {item.badge}
+                          </Badge>
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border/50 p-4">
