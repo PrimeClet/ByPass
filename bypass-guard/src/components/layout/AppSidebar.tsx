@@ -135,7 +135,7 @@ const settingsItems = [
 ]
 
 export function AppSidebar() {
-  const { state } = useSidebar()
+  const { state, setOpen, setOpenMobile, isMobile } = useSidebar()
   const collapsed = state === "collapsed"
   const location = useLocation()
   const currentPath = location.pathname
@@ -146,6 +146,29 @@ export function AppSidebar() {
 
   const dispatch = useDispatch<AppDispatch>();
   const { users, loading, error, user, token } = useSelector((state: RootState) => state.user);
+
+  // Détecter les écrans moyens (entre 768px et 1024px)
+  const [isMediumScreen, setIsMediumScreen] = useState(false)
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const width = window.innerWidth
+      setIsMediumScreen(width >= 768 && width < 1024)
+    }
+
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+    return () => window.removeEventListener('resize', checkScreenSize)
+  }, [])
+
+  // Fonction pour fermer la sidebar sur les écrans moyens
+  const handleLinkClick = () => {
+    if (isMediumScreen && !isMobile) {
+      setOpen(false)
+    } else if (isMobile) {
+      setOpenMobile(false)
+    }
+  }
   
 
   const menuItems = [
@@ -261,6 +284,7 @@ export function AppSidebar() {
                               <NavLink 
                                 to={subItem.url} 
                                 className={({ isActive }) => getNavClass(isActive)}
+                                onClick={handleLinkClick}
                               >
                                 <subItem.icon className="w-4 h-4" />
                                 <span className="text-sm">{subItem.title}</span>
@@ -280,6 +304,7 @@ export function AppSidebar() {
                       <NavLink 
                         to={item.url} 
                         className={({ isActive }) => getNavClass(isActive)}
+                        onClick={handleLinkClick}
                       >
                         <item.icon className="w-4 h-4" />
                         {!collapsed && (
@@ -318,6 +343,7 @@ export function AppSidebar() {
                     <NavLink 
                       to={item.url} 
                       className={({ isActive }) => getNavClass(isActive)}
+                      onClick={handleLinkClick}
                     >
                       <item.icon className="w-4 h-4" />
                       {!collapsed && (
@@ -356,6 +382,7 @@ export function AppSidebar() {
                     <NavLink 
                       to={item.url} 
                       className={({ isActive }) => getNavClass(isActive)}
+                      onClick={handleLinkClick}
                     >
                       <item.icon className="w-4 h-4" />
                       {!collapsed && (
@@ -391,6 +418,7 @@ export function AppSidebar() {
                   <NavLink 
                     to={item.url} 
                     className={({ isActive }) => getNavClass(isActive)}
+                    onClick={handleLinkClick}
                   >
                     <item.icon className="w-4 h-4" />
                     {!collapsed && (

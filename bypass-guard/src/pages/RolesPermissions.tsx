@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Edit2, Shield, Check, X, Save } from 'lucide-react';
+import { Edit2, Shield, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '../axios';
 import { UserPermissions } from '@/types/user';
@@ -301,11 +301,11 @@ const RolesPermissions: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Gestion des Rôles et Permissions</h1>
-        <p className="text-muted-foreground">Configurez les permissions pour chaque rôle</p>
+      <div className="p-3 sm:p-4 min-w-0 box-border">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words">Gestion des Rôles et Permissions</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground break-words">Configurez les permissions pour chaque rôle</p>
       </div>
 
       {/* Dialog pour modifier les permissions */}
@@ -315,47 +315,47 @@ const RolesPermissions: React.FC = () => {
           setEditingRole(null);
         }
       }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">
               Modifier les permissions - {editingRole?.name}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm">
               Ajoutez ou retirez des permissions pour le rôle "{editingRole?.name}"
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4 w-full min-w-0">
             <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">Code: <span className="font-medium">{editingRole?.code}</span></Label>
-              <p className="text-sm text-muted-foreground">{editingRole?.description}</p>
+              <Label className="text-xs sm:text-sm text-muted-foreground">Code: <span className="font-medium">{editingRole?.code}</span></Label>
+              <p className="text-xs sm:text-sm text-muted-foreground">{editingRole?.description}</p>
             </div>
-            <div className="space-y-4">
-              <Label className="text-base font-semibold">Permissions</Label>
+            <div className="space-y-3 sm:space-y-4">
+              <Label className="text-sm sm:text-base font-semibold">Permissions</Label>
               
               {/* Permissions générales */}
-              <div className="space-y-3 border rounded-lg p-4">
-                <h4 className="text-sm font-semibold mb-3">Permissions générales</h4>
+              <div className="space-y-2 sm:space-y-3 border rounded-lg p-3 sm:p-4">
+                <h4 className="text-xs sm:text-sm font-semibold mb-2 sm:mb-3">Permissions générales</h4>
                 {allPermissions.filter(p => 
                   !p.key.includes('Equipment') && 
                   !p.key.includes('User') && 
                   !p.key.includes('Zone') && 
                   !p.key.includes('Sensor')
                 ).map((permission) => (
-                  <div key={permission.key} className="flex items-start space-x-3">
+                  <div key={permission.key} className="flex items-start space-x-2 sm:space-x-3 min-w-0">
                     <Checkbox
                       id={permission.key}
                       checked={editingPermissions[permission.key]}
                       onCheckedChange={() => togglePermission(permission.key)}
-                      className="mt-1"
+                      className="mt-1 flex-shrink-0"
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <Label 
                         htmlFor={permission.key}
-                        className="text-sm font-medium cursor-pointer"
+                        className="text-xs sm:text-sm font-medium cursor-pointer break-words"
                       >
                         {permission.label}
                       </Label>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground break-words">
                         {permission.description}
                       </p>
                     </div>
@@ -364,24 +364,24 @@ const RolesPermissions: React.FC = () => {
               </div>
 
               {/* Permissions Zones */}
-              <div className="space-y-3 border rounded-lg p-4">
-                <h4 className="text-sm font-semibold mb-3">Zones</h4>
+              <div className="space-y-2 sm:space-y-3 border rounded-lg p-3 sm:p-4">
+                <h4 className="text-xs sm:text-sm font-semibold mb-2 sm:mb-3">Zones</h4>
                 {allPermissions.filter(p => p.key.includes('Zone')).map((permission) => (
-                  <div key={permission.key} className="flex items-start space-x-3">
+                  <div key={permission.key} className="flex items-start space-x-2 sm:space-x-3 min-w-0">
                     <Checkbox
                       id={permission.key}
                       checked={editingPermissions[permission.key]}
                       onCheckedChange={() => togglePermission(permission.key)}
-                      className="mt-1"
+                      className="mt-1 flex-shrink-0"
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <Label 
                         htmlFor={permission.key}
-                        className="text-sm font-medium cursor-pointer"
+                        className="text-xs sm:text-sm font-medium cursor-pointer break-words"
                       >
                         {permission.label}
                       </Label>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground break-words">
                         {permission.description}
                       </p>
                     </div>
@@ -390,24 +390,24 @@ const RolesPermissions: React.FC = () => {
               </div>
 
               {/* Permissions Équipements */}
-              <div className="space-y-3 border rounded-lg p-4">
-                <h4 className="text-sm font-semibold mb-3">Équipements</h4>
+              <div className="space-y-2 sm:space-y-3 border rounded-lg p-3 sm:p-4">
+                <h4 className="text-xs sm:text-sm font-semibold mb-2 sm:mb-3">Équipements</h4>
                 {allPermissions.filter(p => p.key.includes('Equipment')).map((permission) => (
-                  <div key={permission.key} className="flex items-start space-x-3">
+                  <div key={permission.key} className="flex items-start space-x-2 sm:space-x-3 min-w-0">
                     <Checkbox
                       id={permission.key}
                       checked={editingPermissions[permission.key]}
                       onCheckedChange={() => togglePermission(permission.key)}
-                      className="mt-1"
+                      className="mt-1 flex-shrink-0"
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <Label 
                         htmlFor={permission.key}
-                        className="text-sm font-medium cursor-pointer"
+                        className="text-xs sm:text-sm font-medium cursor-pointer break-words"
                       >
                         {permission.label}
                       </Label>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground break-words">
                         {permission.description}
                       </p>
                     </div>
@@ -416,24 +416,24 @@ const RolesPermissions: React.FC = () => {
               </div>
 
               {/* Permissions Utilisateurs */}
-              <div className="space-y-3 border rounded-lg p-4">
-                <h4 className="text-sm font-semibold mb-3">Utilisateurs</h4>
+              <div className="space-y-2 sm:space-y-3 border rounded-lg p-3 sm:p-4">
+                <h4 className="text-xs sm:text-sm font-semibold mb-2 sm:mb-3">Utilisateurs</h4>
                 {allPermissions.filter(p => p.key.includes('User')).map((permission) => (
-                  <div key={permission.key} className="flex items-start space-x-3">
+                  <div key={permission.key} className="flex items-start space-x-2 sm:space-x-3 min-w-0">
                     <Checkbox
                       id={permission.key}
                       checked={editingPermissions[permission.key]}
                       onCheckedChange={() => togglePermission(permission.key)}
-                      className="mt-1"
+                      className="mt-1 flex-shrink-0"
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <Label 
                         htmlFor={permission.key}
-                        className="text-sm font-medium cursor-pointer"
+                        className="text-xs sm:text-sm font-medium cursor-pointer break-words"
                       >
                         {permission.label}
                       </Label>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground break-words">
                         {permission.description}
                       </p>
                     </div>
@@ -442,24 +442,24 @@ const RolesPermissions: React.FC = () => {
               </div>
 
               {/* Permissions Capteurs */}
-              <div className="space-y-3 border rounded-lg p-4">
-                <h4 className="text-sm font-semibold mb-3">Capteurs</h4>
+              <div className="space-y-2 sm:space-y-3 border rounded-lg p-3 sm:p-4">
+                <h4 className="text-xs sm:text-sm font-semibold mb-2 sm:mb-3">Capteurs</h4>
                 {allPermissions.filter(p => p.key.includes('Sensor')).map((permission) => (
-                  <div key={permission.key} className="flex items-start space-x-3">
+                  <div key={permission.key} className="flex items-start space-x-2 sm:space-x-3 min-w-0">
                     <Checkbox
                       id={permission.key}
                       checked={editingPermissions[permission.key]}
                       onCheckedChange={() => togglePermission(permission.key)}
-                      className="mt-1"
+                      className="mt-1 flex-shrink-0"
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <Label 
                         htmlFor={permission.key}
-                        className="text-sm font-medium cursor-pointer"
+                        className="text-xs sm:text-sm font-medium cursor-pointer break-words"
                       >
                         {permission.label}
                       </Label>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground break-words">
                         {permission.description}
                       </p>
                     </div>
@@ -468,7 +468,7 @@ const RolesPermissions: React.FC = () => {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
             <Button 
               type="button" 
               variant="outline" 
@@ -477,11 +477,12 @@ const RolesPermissions: React.FC = () => {
                 setEditingRole(null);
               }}
               disabled={isLoading}
+              className="w-full sm:w-auto text-sm"
             >
               Annuler
             </Button>
-            <Button onClick={handleSavePermissions} disabled={isLoading}>
-              <Save className="w-4 h-4 mr-2" />
+            <Button onClick={handleSavePermissions} disabled={isLoading} className="w-full sm:w-auto text-sm">
+              <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
               {isLoading ? 'Enregistrement...' : 'Enregistrer les permissions'}
             </Button>
           </DialogFooter>
@@ -489,134 +490,98 @@ const RolesPermissions: React.FC = () => {
       </Dialog>
 
       {/* Liste des rôles */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
+      <Card className="w-full min-w-0 box-border">
+        <CardHeader className="p-3 sm:p-4">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
             Rôles ({roles.length})
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Liste des rôles et leurs permissions
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nom</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Utilisateurs</TableHead>
-                <TableHead>Permissions</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {roles.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Aucun rôle</h3>
-                    <p className="text-muted-foreground">
-                      Les rôles sont prédéfinis dans le système.
-                    </p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                roles.map((role) => (
-                  <TableRow key={role.id}>
-                    <TableCell className="font-medium">{role.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{role.code}</Badge>
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate">{role.description}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{role.userCount || 0}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {Object.entries(role.permissions)
-                          .filter(([_, value]) => value)
-                          .slice(0, 3)
-                          .map(([key]) => {
-                            const perm = allPermissions.find(p => p.key === key);
-                            return perm ? (
-                              <Badge key={key} variant="outline" className="text-xs">
-                                {perm.label}
-                              </Badge>
-                            ) : null;
-                          })}
-                        {Object.values(role.permissions).filter(Boolean).length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{Object.values(role.permissions).filter(Boolean).length - 3}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditPermissions(role)}
-                      >
-                        <Edit2 className="h-4 w-4 mr-2" />
-                        Modifier les permissions
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Matrice des permissions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Matrice des Permissions</CardTitle>
-          <CardDescription>
-            Vue d'ensemble des permissions par rôle
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
+        <CardContent className="p-0 sm:p-3 w-full min-w-0 overflow-hidden box-border">
+          <div className="w-full min-w-0 overflow-x-hidden box-border">
+            <Table className="w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Permission</TableHead>
-                  {roles.map((role) => (
-                    <TableHead key={role.id} className="text-center min-w-[120px]">
-                      {role.name}
-                    </TableHead>
-                  ))}
+                  <TableHead className="text-xs sm:text-sm min-w-0 w-[20%] sm:w-auto">Nom</TableHead>
+                  <TableHead className="text-xs sm:text-sm hidden sm:table-cell min-w-0 w-[15%]">Code</TableHead>
+                  <TableHead className="text-xs sm:text-sm hidden md:table-cell min-w-0 w-[25%]">Description</TableHead>
+                  <TableHead className="text-xs sm:text-sm hidden lg:table-cell min-w-0 w-[10%]">Utilisateurs</TableHead>
+                  <TableHead className="text-xs sm:text-sm min-w-0 w-[20%] sm:w-auto">Permissions</TableHead>
+                  <TableHead className="text-xs sm:text-sm text-right min-w-0 w-[15%] sm:w-auto">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allPermissions.map((permission) => (
-                  <TableRow key={permission.key}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{permission.label}</div>
-                        <div className="text-xs text-muted-foreground">{permission.description}</div>
-                      </div>
+                {roles.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-6 sm:py-8">
+                      <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-base sm:text-lg font-semibold mb-2">Aucun rôle</h3>
+                      <p className="text-sm sm:text-base text-muted-foreground">
+                        Les rôles sont prédéfinis dans le système.
+                      </p>
                     </TableCell>
-                    {roles.map((role) => (
-                      <TableCell key={role.id} className="text-center">
-                        {role.permissions[permission.key] ? (
-                          <Check className="w-5 h-5 text-green-600 mx-auto" />
-                        ) : (
-                          <X className="w-5 h-5 text-muted-foreground mx-auto" />
-                        )}
-                      </TableCell>
-                    ))}
                   </TableRow>
-                ))}
+                ) : (
+                  roles.map((role) => (
+                    <TableRow key={role.id}>
+                      <TableCell className="font-medium text-xs sm:text-sm min-w-0 overflow-hidden">
+                        <div className="flex flex-col sm:block min-w-0">
+                          <span className="truncate sm:whitespace-normal">{role.name}</span>
+                          <span className="text-xs text-muted-foreground sm:hidden mt-1 truncate">{role.code}</span>
+                          <span className="text-xs text-muted-foreground md:hidden mt-1 line-clamp-2">{role.description}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell min-w-0 overflow-hidden">
+                        <Badge variant="outline" className="text-xs whitespace-nowrap">{role.code}</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs sm:text-sm hidden md:table-cell truncate min-w-0 overflow-hidden max-w-[200px]">{role.description}</TableCell>
+                      <TableCell className="hidden lg:table-cell min-w-0 overflow-hidden">
+                        <Badge variant="secondary" className="text-xs sm:text-sm whitespace-nowrap">{role.userCount || 0}</Badge>
+                      </TableCell>
+                      <TableCell className="min-w-0 overflow-hidden">
+                        <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                          {Object.entries(role.permissions)
+                            .filter(([_, value]) => value)
+                            .slice(0, 2)
+                            .map(([key]) => {
+                              const perm = allPermissions.find(p => p.key === key);
+                              return perm ? (
+                                <Badge key={key} variant="outline" className="text-xs truncate max-w-[80px] sm:max-w-none">
+                                  <span className="hidden sm:inline">{perm.label}</span>
+                                  <span className="sm:hidden">{perm.label.split(' ')[0]}</span>
+                                </Badge>
+                              ) : null;
+                            })}
+                          {Object.values(role.permissions).filter(Boolean).length > 2 && (
+                            <Badge variant="outline" className="text-xs whitespace-nowrap">
+                              +{Object.values(role.permissions).filter(Boolean).length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right min-w-0 overflow-hidden">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditPermissions(role)}
+                          className="text-xs sm:text-sm h-7 sm:h-8 p-1 sm:p-2"
+                        >
+                          <Edit2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Modifier les permissions</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
+
     </div>
   );
 };

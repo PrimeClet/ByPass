@@ -99,7 +99,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-6">
       <Card className="w-full max-w-md shadow-xl border-primary/10">
         <CardHeader className="space-y-1 text-center">
           <div className="flex items-center justify-center w-16 h-18 mx-auto mb-4">

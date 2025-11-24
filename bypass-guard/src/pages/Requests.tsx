@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { 
@@ -20,8 +19,6 @@ import {
   AlertTriangle,
   Eye,
   ArrowLeft,
-  LayoutGrid,
-  Table as TableIcon
 } from "lucide-react"
 import { BypassRequestForm } from "@/components/forms/BypassRequestForm"
 import { RequestDetailsModal } from "@/components/RequestDetailsModal"
@@ -87,7 +84,6 @@ export default function Requests() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const [activeTab, setActiveTab] = useState(user.role !== 'user' ? "mine" : "mine");
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   // Déterminer quelle vue afficher selon l'URL
   const isNewRequest = location.pathname === '/requests/new'
 
@@ -267,20 +263,21 @@ export default function Requests() {
   // Si on est sur /requests/new, afficher le formulaire
   if (isNewRequest) {
     return (
-      <div className="flex-1 space-y-6 p-6">
+      <div className="flex-1 space-y-3 sm:space-y-4 md:space-y-6 p-3 sm:p-4 md:p-6">
         {/* Header avec navigation retour */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+          <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
             <Link to="/requests">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Retour aux demandes
+              <ArrowLeft className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Retour aux demandes</span>
+              <span className="sm:hidden">Retour</span>
             </Link>
           </Button>
-          <div className="text-center lg:text-left">
-            <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">
+          <div className="text-left w-full sm:w-auto">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
               Nouvelle demande de bypass
             </h1>
-            <p className="text-sm lg:text-base text-muted-foreground">
+            <p className="text-xs sm:text-sm md:text-base text-muted-foreground mt-1">
               Créer une nouvelle demande de bypass de capteur
             </p>
           </div>
@@ -294,62 +291,71 @@ export default function Requests() {
 
   // Sinon, afficher la liste des demandes
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestion des demandes</h1>
-          <p className="text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 min-w-0 box-border">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words">Gestion des demandes</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground break-words">
             Suivi et gestion des demandes de bypass
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="w-full sm:w-auto text-sm">
           <Link to="/requests/new">
-            <Plus className="w-4 h-4 mr-2" />
-            Nouvelle demande
+            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
+            <span className="hidden sm:inline">Nouvelle demande</span>
+            <span className="sm:hidden">Nouvelle</span>
           </Link>
         </Button>
       </div>
 
       {/* Onglets de navigation */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full min-w-0">
+        <TabsList className="flex flex-col w-full h-auto gap-2">
           {(user.role === "administrator") && (
-            <TabsTrigger value="all" onClick={resetFilter}>Toutes les demandes</TabsTrigger>
+            <TabsTrigger value="all" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 w-full justify-start">
+              Toutes les demandes
+            </TabsTrigger>
           )}
-          <TabsTrigger value="mine" onClick={resetFilter}>Mes demandes</TabsTrigger>
+          <TabsTrigger value="mine" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 w-full justify-start">
+            Mes demandes
+          </TabsTrigger>
           {(user.role === "administrator" || user.role === "supervisor") && (
             <>
-              <TabsTrigger value="pending" onClick={resetFilter}>En attente d'approbation</TabsTrigger>
-              <TabsTrigger value="active" onClick={resetFilter}>Bypass actifs</TabsTrigger>
+              <TabsTrigger value="pending" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 w-full justify-start">
+                En attente d'approbation
+              </TabsTrigger>
+              <TabsTrigger value="active" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 w-full justify-start">
+                Bypass actifs
+              </TabsTrigger>
             </>
           )}
           
         </TabsList>
 
         {(user.role === "administrator") && (
-          <TabsContent value="all" className="space-y-6">
+          <TabsContent value="all" className="space-y-4 sm:space-y-6">
             {/* Filters */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Filter className="w-5 h-5" />
+            <Card className="w-full box-border">
+              <CardHeader className="p-3 sm:p-4">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <Filter className="w-4 h-4 sm:w-4 sm:h-4" />
                   Filtres
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
+                <div className="grid gap-3 sm:gap-3 md:gap-4 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
+                  <div className="relative sm:col-span-2 lg:col-span-1 w-full min-w-0">
+                    <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                     <Input
                       placeholder="Rechercher..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
+                      className="pl-8 sm:pl-10 text-sm w-full"
                     />
                   </div>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
                       <SelectValue placeholder="Statut" />
                     </SelectTrigger>
                     <SelectContent>
@@ -361,7 +367,7 @@ export default function Requests() {
                     </SelectContent>
                   </Select>
                   <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
                       <SelectValue placeholder="Priorité" />
                     </SelectTrigger>
                     <SelectContent>
@@ -375,8 +381,9 @@ export default function Requests() {
                     setSearchTerm("")
                     setStatusFilter("all")
                     setPriorityFilter("all")
-                  }}>
-                    Réinitialiser filtres
+                  }} className="text-sm h-9 sm:h-10 w-full sm:w-auto">
+                    <span className="hidden sm:inline">Réinitialiser filtres</span>
+                    <span className="sm:hidden">Réinitialiser</span>
                   </Button>
                 </div>
               </CardContent>
@@ -384,15 +391,15 @@ export default function Requests() {
 
             {/* Contrôles de pagination et sélection du nombre d'éléments */}
             {filteredRequests.length > 0 && (
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="items-per-page">Éléments par page:</Label>
+              <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mt-3 sm:mt-4 w-full min-w-0">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Label htmlFor="items-per-page" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Éléments par page:</Label>
                     <Select 
                       value={itemsPerPage.toString()} 
                       onValueChange={(value) => setItemsPerPage(Number(value))}
                     >
-                      <SelectTrigger className="w-24">
+                      <SelectTrigger className="w-16 sm:w-20 flex-shrink-0 h-8 text-xs sm:text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -404,159 +411,79 @@ export default function Requests() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex items-center gap-2 border rounded-md p-1">
-                    <Button
-                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewMode('grid')}
-                      className="h-8"
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={viewMode === 'table' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewMode('table')}
-                      className="h-8"
-                    >
-                      <TableIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-xs text-muted-foreground text-center sm:text-right">
                   Affichage de {startIndex + 1} à {Math.min(endIndex, filteredRequests.length)} sur {filteredRequests.length} demande{filteredRequests.length > 1 ? 's' : ''}
                 </div>
               </div>
             )}
 
             {/* Requests list */}
-            {viewMode === 'grid' ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Demandes ({filteredRequests.length})</CardTitle>
-                  <CardDescription>
-                    Liste des demandes de bypass
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {activeTab === "all" && paginatedList.length === 0 ? (
-                      <div className="text-center py-8">
-                        <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-muted-foreground">Aucune demande trouvée.</p>
-                      </div>
-                    ) : (
-                      activeTab === "all" && paginatedList.map((request) => (
-                        <div 
-                          key={request.id} 
-                          className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                              {getStatusIcon(request.status)}
-                            </div>
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{request.request_code}</span>
-                                <Badge variant="outline" className={getPriorityColor(request.priority)}>
-                                  {request.priority}
-                                </Badge>
-                                <Badge className={getStatusColor(request.status)}>
-                                  {request.status}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">{request.equipment.name}</p>
-                              <p className="text-xs text-muted-foreground">{request.sensor.name}</p>
-                            </div>
+            <Card className="w-full box-border">
+              <CardHeader className="p-3 sm:p-4">
+                <CardTitle className="text-sm sm:text-base">Demandes ({filteredRequests.length})</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Liste des demandes de bypass
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
+                <div className="space-y-3 sm:space-y-3 md:space-y-4 w-full min-w-0">
+                  {activeTab === "all" && paginatedList.length === 0 ? (
+                    <div className="text-center py-6 sm:py-8">
+                      <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-sm sm:text-base text-muted-foreground">Aucune demande trouvée.</p>
+                    </div>
+                  ) : (
+                    activeTab === "all" && paginatedList.map((request) => (
+                      <div 
+                        key={request.id} 
+                        className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors min-w-0"
+                      >
+                        <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                          <div className="flex items-center justify-center w-8 h-8 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex-shrink-0">
+                            {getStatusIcon(request.status)}
                           </div>
-                          <div className="text-right space-y-1">
-                            <p className="text-sm font-medium">{request.requester.full_name}</p>
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</span>
+                              <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs"}>
+                                {request.priority}
+                              </Badge>
+                              <Badge className={getStatusColor(request.status) + " text-xs"}>
+                                {request.status}
+                              </Badge>
+                            </div>
+                            <p className="text-xs sm:text-xs text-muted-foreground truncate">{request.equipment.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{request.sensor.name}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-3 md:gap-4 sm:flex-col sm:items-end sm:text-right min-w-0">
+                          <div className="space-y-1 min-w-0 flex-1 sm:flex-none">
+                            <p className="text-xs sm:text-sm font-medium truncate">{request.requester.full_name}</p>
                             <p className="text-xs text-muted-foreground">
                             {new Date(request.created_at).toLocaleString("fr-FR", {
                               dateStyle: "medium",
                               timeStyle: "short",
                             })}
                             </p>
-                            
-                            <p className="text-xs text-muted-foreground">{request.description}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2 sm:line-clamp-none">{request.description}</p>
                           </div>
-                          <RequestDetailsModal request={request} />
+                          <div className="flex-shrink-0">
+                            <RequestDetailsModal request={request} />
+                          </div>
                         </div>
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Demandes ({filteredRequests.length})</CardTitle>
-                  <CardDescription>
-                    Liste des demandes de bypass
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Code</TableHead>
-                        <TableHead>Équipement</TableHead>
-                        <TableHead>Capteur</TableHead>
-                        <TableHead>Demandeur</TableHead>
-                        <TableHead>Priorité</TableHead>
-                        <TableHead>Statut</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {activeTab === "all" && paginatedList.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8">
-                            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                            <p className="text-muted-foreground">Aucune demande trouvée.</p>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        activeTab === "all" && paginatedList.map((request) => (
-                          <TableRow key={request.id}>
-                            <TableCell className="font-medium">{request.request_code}</TableCell>
-                            <TableCell>{request.equipment.name}</TableCell>
-                            <TableCell>{request.sensor.name}</TableCell>
-                            <TableCell>{request.requester.full_name}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={getPriorityColor(request.priority)}>
-                                {request.priority}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={getStatusColor(request.status)}>
-                                {request.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {new Date(request.created_at).toLocaleString("fr-FR", {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              })}
-                            </TableCell>
-                            <TableCell>
-                              <RequestDetailsModal request={request} />
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Pagination */}
             {filteredRequests.length > 0 && totalPages > 1 && (
-              <div className="flex justify-end items-center mt-6 float-right">
+              <div className="flex justify-center sm:justify-end items-center mt-4 sm:mt-6 w-full min-w-0 overflow-x-hidden">
                 <Pagination>
-                  <PaginationContent>
+                  <PaginationContent className="flex-wrap min-w-0">
                     <PaginationItem>
                       <PaginationPrevious 
                         href="#"
@@ -607,42 +534,42 @@ export default function Requests() {
         
 
         {/* Autres onglets avec contenu similaire filtré */}
-        <TabsContent value="mine" className="space-y-6">
-          {requestDemand.length === 0 ? (<Card >
-              <CardHeader>
-                <CardTitle>Mes demandes</CardTitle>
-                <CardDescription>
+        <TabsContent value="mine" className="space-y-4 sm:space-y-6">
+          {requestDemand.length === 0 ? (<Card className="w-full box-border">
+              <CardHeader className="p-3 sm:p-4">
+                <CardTitle className="text-sm sm:text-base">Mes demandes</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
                   Vos demandes de bypass
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground text-center py-8">
+              <CardContent className="p-3 sm:p-4 pt-0">
+                <p className="text-sm sm:text-base text-muted-foreground text-center py-6 sm:py-8">
                   Aucune demande.
                 </p>
               </CardContent>
             </Card>) : 
             (
               <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Filter className="w-5 h-5" />
+                <Card className="w-full box-border">
+                  <CardHeader className="p-3 sm:p-4">
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                      <Filter className="w-4 h-4 sm:w-4 sm:h-4" />
                       Filtres
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-4 md:grid-cols-4">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
+                    <div className="grid gap-3 sm:gap-3 md:gap-4 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
+                      <div className="relative sm:col-span-2 lg:col-span-1 w-full min-w-0">
+                        <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                         <Input
                           placeholder="Rechercher..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10"
+                          className="pl-8 sm:pl-10 text-sm w-full"
                         />
                       </div>
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger>
+                        <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
                           <SelectValue placeholder="Statut" />
                         </SelectTrigger>
                         <SelectContent>
@@ -654,7 +581,7 @@ export default function Requests() {
                         </SelectContent>
                       </Select>
                       <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                        <SelectTrigger>
+                        <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
                           <SelectValue placeholder="Priorité" />
                         </SelectTrigger>
                         <SelectContent>
@@ -668,8 +595,9 @@ export default function Requests() {
                         setSearchTerm("")
                         setStatusFilter("all")
                         setPriorityFilter("all")
-                      }}>
-                        Réinitialiser filtres
+                      }} className="text-sm h-9 sm:h-10 w-full sm:w-auto">
+                        <span className="hidden sm:inline">Réinitialiser filtres</span>
+                        <span className="sm:hidden">Réinitialiser</span>
                       </Button>
                     </div>
                   </CardContent>
@@ -677,15 +605,15 @@ export default function Requests() {
 
                 {/* Contrôles de pagination et sélection du nombre d'éléments */}
                 {filteredDemand.length > 0 && (
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="items-per-page">Éléments par page:</Label>
+                  <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mt-3 sm:mt-4 w-full min-w-0">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Label htmlFor="items-per-page" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Éléments par page:</Label>
                         <Select 
                           value={itemsPerPage.toString()} 
                           onValueChange={(value) => setItemsPerPage(Number(value))}
                         >
-                          <SelectTrigger className="w-24">
+                          <SelectTrigger className="w-16 sm:w-20 flex-shrink-0 h-8 text-xs sm:text-sm">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -697,157 +625,79 @@ export default function Requests() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="flex items-center gap-2 border rounded-md p-1">
-                        <Button
-                          variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => setViewMode('grid')}
-                          className="h-8"
-                        >
-                          <LayoutGrid className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant={viewMode === 'table' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => setViewMode('table')}
-                          className="h-8"
-                        >
-                          <TableIcon className="h-4 w-4" />
-                        </Button>
-                      </div>
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-xs text-muted-foreground text-center sm:text-right">
                       Affichage de {startIndex + 1} à {Math.min(endIndex, filteredDemand.length)} sur {filteredDemand.length} demande{filteredDemand.length > 1 ? 's' : ''}
                     </div>
                   </div>
                 )}
 
                 {/* Requests list */}
-                {viewMode === 'grid' ? (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Demandes ({filteredDemand.length})</CardTitle>
-                      <CardDescription>
-                        Liste des demandes de bypass
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {activeTab === "mine" && paginatedList.length === 0 ? (
-                          <div className="text-center py-8">
-                            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                            <p className="text-muted-foreground">Aucune demande trouvée.</p>
-                          </div>
-                        ) : (
-                          activeTab === "mine" && paginatedList.map((request) => (
-                            <div 
-                              key={request.id} 
-                              className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                            >
-                              <div className="flex items-center gap-4">
-                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                                  {getStatusIcon(request.status)}
-                                </div>
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">{request.request_code}</span>
-                                    <Badge variant="outline" className={getPriorityColor(request.priority)}>
-                                      {request.priority}
-                                    </Badge>
-                                    <Badge className={getStatusColor(request.status)}>
-                                      {request.status}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">{request.equipment.name}</p>
-                                  <p className="text-xs text-muted-foreground">{request.sensor.name}</p>
-                                </div>
+                <Card className="w-full box-border">
+                  <CardHeader className="p-3 sm:p-4">
+                    <CardTitle className="text-sm sm:text-base">Demandes ({filteredDemand.length})</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      Liste des demandes de bypass
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
+                    <div className="space-y-3 sm:space-y-3 md:space-y-4 w-full min-w-0">
+                      {activeTab === "mine" && paginatedList.length === 0 ? (
+                        <div className="text-center py-6 sm:py-8">
+                          <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+                          <p className="text-sm sm:text-base text-muted-foreground">Aucune demande trouvée.</p>
+                        </div>
+                      ) : (
+                        activeTab === "mine" && paginatedList.map((request) => (
+                          <div 
+                            key={request.id} 
+                            className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors min-w-0"
+                          >
+                            <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                              <div className="flex items-center justify-center w-8 h-8 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex-shrink-0">
+                                {getStatusIcon(request.status)}
                               </div>
-                              <div className="text-right space-y-1">
-                                <p className="text-sm font-medium">{request.requester ? request.requester.full_name : 'Moi'}</p>
+                              <div className="space-y-1 min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="font-medium text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</span>
+                                  <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs"}>
+                                    {request.priority}
+                                  </Badge>
+                                  <Badge className={getStatusColor(request.status) + " text-xs"}>
+                                    {request.status}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs sm:text-xs text-muted-foreground truncate">{request.equipment.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{request.sensor.name}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-3 md:gap-4 sm:flex-col sm:items-end sm:text-right min-w-0">
+                              <div className="space-y-1 min-w-0 flex-1 sm:flex-none">
+                                <p className="text-xs sm:text-sm font-medium truncate">{request.requester ? request.requester.full_name : 'Moi'}</p>
                                 <p className="text-xs text-muted-foreground">
                                 {new Date(request.created_at).toLocaleString("fr-FR", {
                                   dateStyle: "medium",
                                   timeStyle: "short",
                                 })}
                                 </p>
-                                
-                                <p className="text-xs text-muted-foreground">{request.description}</p>
+                                <p className="text-xs text-muted-foreground line-clamp-2 sm:line-clamp-none">{request.description}</p>
                               </div>
-                              <RequestDetailsModal request={request} />
+                              <div className="flex-shrink-0">
+                                <RequestDetailsModal request={request} />
+                              </div>
                             </div>
-                          ))
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Demandes ({filteredDemand.length})</CardTitle>
-                      <CardDescription>
-                        Liste des demandes de bypass
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Code</TableHead>
-                            <TableHead>Équipement</TableHead>
-                            <TableHead>Capteur</TableHead>
-                            <TableHead>Priorité</TableHead>
-                            <TableHead>Statut</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {activeTab === "mine" && paginatedList.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={7} className="text-center py-8">
-                                <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                                <p className="text-muted-foreground">Aucune demande trouvée.</p>
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            activeTab === "mine" && paginatedList.map((request) => (
-                              <TableRow key={request.id}>
-                                <TableCell className="font-medium">{request.request_code}</TableCell>
-                                <TableCell>{request.equipment.name}</TableCell>
-                                <TableCell>{request.sensor.name}</TableCell>
-                                <TableCell>
-                                  <Badge variant="outline" className={getPriorityColor(request.priority)}>
-                                    {request.priority}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge className={getStatusColor(request.status)}>
-                                    {request.status}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  {new Date(request.created_at).toLocaleString("fr-FR", {
-                                    dateStyle: "medium",
-                                    timeStyle: "short",
-                                  })}
-                                </TableCell>
-                                <TableCell>
-                                  <RequestDetailsModal request={request} />
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </Card>
-                )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Pagination */}
                 {filteredDemand.length > 0 && totalPages > 1 && (
-                  <div className="flex justify-end items-center mt-6 float-right">
+                  <div className="flex justify-center sm:justify-end items-center mt-4 sm:mt-6 w-full min-w-0 overflow-x-hidden">
                     <Pagination>
-                      <PaginationContent>
+                      <PaginationContent className="flex-wrap min-w-0">
                         <PaginationItem>
                           <PaginationPrevious 
                             href="#"
@@ -897,86 +747,87 @@ export default function Requests() {
 
         {(user.role === "administrator" || user.role === "supervisor") && (
           <>
-            <TabsContent value="pending" className="space-y-6">
+            <TabsContent value="pending" className="space-y-4 sm:space-y-6">
               
-              {requestApprobation.length === 0 ? (<Card >
-                <CardHeader>
-                  <CardTitle>En attente d'approbation</CardTitle>
-                  <CardDescription>
+              {requestApprobation.length === 0 ? (<Card className="w-full box-border">
+                <CardHeader className="p-3 sm:p-4">
+                  <CardTitle className="text-sm sm:text-base">En attente d'approbation</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
                     Demandes nécessitant une action
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-center py-8">
+                <CardContent className="p-3 sm:p-4 pt-0">
+                  <p className="text-sm sm:text-base text-muted-foreground text-center py-6 sm:py-8">
                     Aucune demande en attente d'approbation.
                   </p>
                 </CardContent>
               </Card>) : 
               (
                 <>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Filter className="w-5 h-5" />
+                  <Card className="w-full box-border">
+                    <CardHeader className="p-3 sm:p-4">
+                      <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                        <Filter className="w-4 h-4 sm:w-4 sm:h-4" />
                         Filtres
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-4 md:grid-cols-4">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Rechercher..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                          />
-                        </div>
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Statut" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Tous les statuts</SelectItem>
-                            <SelectItem value="pending">En attente</SelectItem>
-                            <SelectItem value="in_progress">En cours</SelectItem>
-                            <SelectItem value="approuved">Approuvé</SelectItem>
-                            <SelectItem value="rejected">Rejeté</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Priorité" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Toutes les priorités</SelectItem>
-                            <SelectItem value="high">Haute</SelectItem>
-                            <SelectItem value="medium">Moyenne</SelectItem>
-                            <SelectItem value="low">Faible</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button variant="outline" onClick={() => {
-                          setSearchTerm("")
-                          setStatusFilter("all")
-                          setPriorityFilter("all")
-                        }}>
-                          Réinitialiser filtres
-                        </Button>
+                    <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
+                      <div className="grid gap-3 sm:gap-3 md:gap-4 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
+                      <div className="relative sm:col-span-2 lg:col-span-1 w-full min-w-0">
+                        <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Rechercher..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-8 sm:pl-10 text-sm w-full"
+                        />
+                      </div>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
+                          <SelectValue placeholder="Statut" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tous les statuts</SelectItem>
+                          <SelectItem value="pending">En attente</SelectItem>
+                          <SelectItem value="in_progress">En cours</SelectItem>
+                          <SelectItem value="approuved">Approuvé</SelectItem>
+                          <SelectItem value="rejected">Rejeté</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                        <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
+                          <SelectValue placeholder="Priorité" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes les priorités</SelectItem>
+                          <SelectItem value="high">Haute</SelectItem>
+                          <SelectItem value="medium">Moyenne</SelectItem>
+                          <SelectItem value="low">Faible</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button variant="outline" onClick={() => {
+                        setSearchTerm("")
+                        setStatusFilter("all")
+                        setPriorityFilter("all")
+                      }} className="text-sm h-9 sm:h-10 w-full sm:w-auto">
+                        <span className="hidden sm:inline">Réinitialiser filtres</span>
+                        <span className="sm:hidden">Réinitialiser</span>
+                      </Button>
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* Contrôles de pagination et sélection du nombre d'éléments */}
                   {filteredApprobation.length > 0 && (
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor="items-per-page">Éléments par page:</Label>
+                    <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mt-3 sm:mt-4 w-full min-w-0">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Label htmlFor="items-per-page" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Éléments par page:</Label>
                           <Select 
                             value={itemsPerPage.toString()} 
                             onValueChange={(value) => setItemsPerPage(Number(value))}
                           >
-                            <SelectTrigger className="w-24">
+                            <SelectTrigger className="w-16 sm:w-20 flex-shrink-0 h-8 text-xs sm:text-sm">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -988,159 +839,79 @@ export default function Requests() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="flex items-center gap-2 border rounded-md p-1">
-                          <Button
-                            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                            size="sm"
-                            onClick={() => setViewMode('grid')}
-                            className="h-8"
-                          >
-                            <LayoutGrid className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant={viewMode === 'table' ? 'default' : 'ghost'}
-                            size="sm"
-                            onClick={() => setViewMode('table')}
-                            className="h-8"
-                          >
-                            <TableIcon className="h-4 w-4" />
-                          </Button>
-                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-xs text-muted-foreground text-center sm:text-right">
                         Affichage de {startIndex + 1} à {Math.min(endIndex, filteredApprobation.length)} sur {filteredApprobation.length} demande{filteredApprobation.length > 1 ? 's' : ''}
                       </div>
                     </div>
                   )}
 
                   {/* Requests list */}
-                  {viewMode === 'grid' ? (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Demandes ({filteredApprobation.length})</CardTitle>
-                        <CardDescription>
-                          Liste des demandes de bypass
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {activeTab === "pending" && paginatedList.length === 0 ? (
-                            <div className="text-center py-8">
-                              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                              <p className="text-muted-foreground">Aucune demande trouvée.</p>
-                            </div>
-                          ) : (
-                            activeTab === "pending" && paginatedList.map((request) => (
-                              <div 
-                                key={request.id} 
-                                className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                              >
-                                <div className="flex items-center gap-4">
-                                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                                    {getStatusIcon(request.status)}
-                                  </div>
-                                  <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium">{request.request_code}</span>
-                                      <Badge variant="outline" className={getPriorityColor(request.priority)}>
-                                        {request.priority}
-                                      </Badge>
-                                      <Badge className={getStatusColor(request.status)}>
-                                        {request.status}
-                                      </Badge>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">{request.equipment.name}</p>
-                                    <p className="text-xs text-muted-foreground">{request.sensor.name}</p>
-                                  </div>
+                  <Card className="w-full box-border">
+                    <CardHeader className="p-3 sm:p-4">
+                      <CardTitle className="text-sm sm:text-base">Demandes ({filteredApprobation.length})</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">
+                        Liste des demandes de bypass
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
+                      <div className="space-y-3 sm:space-y-3 md:space-y-4 w-full min-w-0">
+                        {activeTab === "pending" && paginatedList.length === 0 ? (
+                          <div className="text-center py-6 sm:py-8">
+                            <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-sm sm:text-base text-muted-foreground">Aucune demande trouvée.</p>
+                          </div>
+                        ) : (
+                          activeTab === "pending" && paginatedList.map((request) => (
+                            <div 
+                              key={request.id} 
+                              className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors min-w-0"
+                            >
+                              <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                                <div className="flex items-center justify-center w-8 h-8 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex-shrink-0">
+                                  {getStatusIcon(request.status)}
                                 </div>
-                                <div className="text-right space-y-1">
-                                  <p className="text-sm font-medium">{request.requester.full_name}</p>
+                                <div className="space-y-1 min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="font-medium text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</span>
+                                    <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs"}>
+                                      {request.priority}
+                                    </Badge>
+                                    <Badge className={getStatusColor(request.status) + " text-xs"}>
+                                      {request.status}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-xs sm:text-xs text-muted-foreground truncate">{request.equipment.name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{request.sensor.name}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-3 md:gap-4 sm:flex-col sm:items-end sm:text-right min-w-0">
+                                <div className="space-y-1 min-w-0 flex-1 sm:flex-none">
+                                  <p className="text-xs sm:text-sm font-medium truncate">{request.requester.full_name}</p>
                                   <p className="text-xs text-muted-foreground">
                                   {new Date(request.created_at).toLocaleString("fr-FR", {
                                     dateStyle: "medium",
                                     timeStyle: "short",
                                   })}
                                   </p>
-                                  
-                                  <p className="text-xs text-muted-foreground">{request.description}</p>
+                                  <p className="text-xs text-muted-foreground line-clamp-2 sm:line-clamp-none">{request.description}</p>
                                 </div>
-                                <RequestDetailsModal request={request} />
+                                <div className="flex-shrink-0">
+                                  <RequestDetailsModal request={request} />
+                                </div>
                               </div>
-                            ))
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Demandes ({filteredApprobation.length})</CardTitle>
-                        <CardDescription>
-                          Liste des demandes de bypass
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Code</TableHead>
-                              <TableHead>Équipement</TableHead>
-                              <TableHead>Capteur</TableHead>
-                              <TableHead>Demandeur</TableHead>
-                              <TableHead>Priorité</TableHead>
-                              <TableHead>Statut</TableHead>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {activeTab === "pending" && paginatedList.length === 0 ? (
-                              <TableRow>
-                                <TableCell colSpan={8} className="text-center py-8">
-                                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                                  <p className="text-muted-foreground">Aucune demande trouvée.</p>
-                                </TableCell>
-                              </TableRow>
-                            ) : (
-                              activeTab === "pending" && paginatedList.map((request) => (
-                                <TableRow key={request.id}>
-                                  <TableCell className="font-medium">{request.request_code}</TableCell>
-                                  <TableCell>{request.equipment.name}</TableCell>
-                                  <TableCell>{request.sensor.name}</TableCell>
-                                  <TableCell>{request.requester.full_name}</TableCell>
-                                  <TableCell>
-                                    <Badge variant="outline" className={getPriorityColor(request.priority)}>
-                                      {request.priority}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge className={getStatusColor(request.status)}>
-                                      {request.status}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                    {new Date(request.created_at).toLocaleString("fr-FR", {
-                                      dateStyle: "medium",
-                                      timeStyle: "short",
-                                    })}
-                                  </TableCell>
-                                  <TableCell>
-                                    <RequestDetailsModal request={request} />
-                                  </TableCell>
-                                </TableRow>
-                              ))
-                            )}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   {/* Pagination */}
                   {filteredApprobation.length > 0 && totalPages > 1 && (
-                    <div className="flex justify-end items-center mt-6 float-right">
+                    <div className="flex justify-center sm:justify-end items-center mt-4 sm:mt-6 w-full min-w-0 overflow-x-hidden">
                       <Pagination>
-                        <PaginationContent>
+                        <PaginationContent className="flex-wrap min-w-0">
                           <PaginationItem>
                             <PaginationPrevious 
                               href="#"
@@ -1188,85 +959,86 @@ export default function Requests() {
               )}
             </TabsContent>
 
-            <TabsContent value="active" className="space-y-6">
-            {requestActifs.length === 0 ? (<Card >
-                <CardHeader>
-                  <CardTitle>Bypass actifs</CardTitle>
-                  <CardDescription>
+            <TabsContent value="active" className="space-y-4 sm:space-y-6">
+            {requestActifs.length === 0 ? (<Card className="w-full box-border">
+                <CardHeader className="p-3 sm:p-4">
+                  <CardTitle className="text-sm sm:text-base">Bypass actifs</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
                     Demandes de bypass actuellement actives
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-center py-8">
+                <CardContent className="p-3 sm:p-4 pt-0">
+                  <p className="text-sm sm:text-base text-muted-foreground text-center py-6 sm:py-8">
                     Aucun bypass actif.
                   </p>
                 </CardContent>
               </Card>) : 
               (
                 <>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Filter className="w-5 h-5" />
+                  <Card className="w-full box-border">
+                    <CardHeader className="p-3 sm:p-4">
+                      <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                        <Filter className="w-4 h-4 sm:w-4 sm:h-4" />
                         Filtres
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-4 md:grid-cols-4">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Rechercher..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                          />
-                        </div>
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Statut" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Tous les statuts</SelectItem>
-                            <SelectItem value="pending">En attente</SelectItem>
-                            <SelectItem value="in_progress">En cours</SelectItem>
-                            <SelectItem value="approuved">Approuvé</SelectItem>
-                            <SelectItem value="rejected">Rejeté</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Priorité" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Toutes les priorités</SelectItem>
-                            <SelectItem value="high">Haute</SelectItem>
-                            <SelectItem value="medium">Moyenne</SelectItem>
-                            <SelectItem value="low">Faible</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button variant="outline" onClick={() => {
-                          setSearchTerm("")
-                          setStatusFilter("all")
-                          setPriorityFilter("all")
-                        }}>
-                          Réinitialiser filtres
-                        </Button>
+                    <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
+                      <div className="grid gap-3 sm:gap-3 md:gap-4 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
+                      <div className="relative sm:col-span-2 lg:col-span-1 w-full min-w-0">
+                        <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Rechercher..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-8 sm:pl-10 text-sm w-full"
+                        />
+                      </div>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
+                          <SelectValue placeholder="Statut" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tous les statuts</SelectItem>
+                          <SelectItem value="pending">En attente</SelectItem>
+                          <SelectItem value="in_progress">En cours</SelectItem>
+                          <SelectItem value="approuved">Approuvé</SelectItem>
+                          <SelectItem value="rejected">Rejeté</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                        <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
+                          <SelectValue placeholder="Priorité" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes les priorités</SelectItem>
+                          <SelectItem value="high">Haute</SelectItem>
+                          <SelectItem value="medium">Moyenne</SelectItem>
+                          <SelectItem value="low">Faible</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button variant="outline" onClick={() => {
+                        setSearchTerm("")
+                        setStatusFilter("all")
+                        setPriorityFilter("all")
+                      }} className="text-sm h-9 sm:h-10 w-full sm:w-auto">
+                        <span className="hidden sm:inline">Réinitialiser filtres</span>
+                        <span className="sm:hidden">Réinitialiser</span>
+                      </Button>
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* Contrôles de pagination et sélection du nombre d'éléments */}
                   {filteredActifs.length > 0 && (
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor="items-per-page">Éléments par page:</Label>
+                    <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mt-3 sm:mt-4 w-full min-w-0">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Label htmlFor="items-per-page" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Éléments par page:</Label>
                           <Select 
                             value={itemsPerPage.toString()} 
                             onValueChange={(value) => setItemsPerPage(Number(value))}
                           >
-                            <SelectTrigger className="w-24">
+                            <SelectTrigger className="w-16 sm:w-20 flex-shrink-0 h-8 text-xs sm:text-sm">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -1278,159 +1050,79 @@ export default function Requests() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="flex items-center gap-2 border rounded-md p-1">
-                          <Button
-                            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                            size="sm"
-                            onClick={() => setViewMode('grid')}
-                            className="h-8"
-                          >
-                            <LayoutGrid className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant={viewMode === 'table' ? 'default' : 'ghost'}
-                            size="sm"
-                            onClick={() => setViewMode('table')}
-                            className="h-8"
-                          >
-                            <TableIcon className="h-4 w-4" />
-                          </Button>
-                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-xs text-muted-foreground text-center sm:text-right">
                         Affichage de {startIndex + 1} à {Math.min(endIndex, filteredActifs.length)} sur {filteredActifs.length} demande{filteredActifs.length > 1 ? 's' : ''}
                       </div>
                     </div>
                   )}
 
                   {/* Requests list */}
-                  {viewMode === 'grid' ? (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Demandes ({filteredActifs.length})</CardTitle>
-                        <CardDescription>
-                          Liste des demandes de bypass
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {activeTab === "active" && paginatedList.length === 0 ? (
-                            <div className="text-center py-8">
-                              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                              <p className="text-muted-foreground">Aucune demande trouvée.</p>
-                            </div>
-                          ) : (
-                            activeTab === "active" && paginatedList.map((request) => (
-                              <div 
-                                key={request.id} 
-                                className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                              >
-                                <div className="flex items-center gap-4">
-                                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                                    {getStatusIcon(request.status)}
-                                  </div>
-                                  <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium">{request.request_code}</span>
-                                      <Badge variant="outline" className={getPriorityColor(request.priority)}>
-                                        {request.priority}
-                                      </Badge>
-                                      <Badge className={getStatusColor(request.status)}>
-                                        {request.status}
-                                      </Badge>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">{request.equipment.name}</p>
-                                    <p className="text-xs text-muted-foreground">{request.sensor.name}</p>
-                                  </div>
+                  <Card className="w-full box-border">
+                    <CardHeader className="p-3 sm:p-4">
+                      <CardTitle className="text-sm sm:text-base">Demandes ({filteredActifs.length})</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">
+                        Liste des demandes de bypass
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
+                      <div className="space-y-3 sm:space-y-3 md:space-y-4 w-full min-w-0">
+                        {activeTab === "active" && paginatedList.length === 0 ? (
+                          <div className="text-center py-6 sm:py-8">
+                            <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-sm sm:text-base text-muted-foreground">Aucune demande trouvée.</p>
+                          </div>
+                        ) : (
+                          activeTab === "active" && paginatedList.map((request) => (
+                            <div 
+                              key={request.id} 
+                              className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors min-w-0"
+                            >
+                              <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                                <div className="flex items-center justify-center w-8 h-8 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex-shrink-0">
+                                  {getStatusIcon(request.status)}
                                 </div>
-                                <div className="text-right space-y-1">
-                                  <p className="text-sm font-medium">{request.requester.full_name}</p>
+                                <div className="space-y-1 min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="font-medium text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</span>
+                                    <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs"}>
+                                      {request.priority}
+                                    </Badge>
+                                    <Badge className={getStatusColor(request.status) + " text-xs"}>
+                                      {request.status}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-xs sm:text-xs text-muted-foreground truncate">{request.equipment.name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{request.sensor.name}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-3 md:gap-4 sm:flex-col sm:items-end sm:text-right min-w-0">
+                                <div className="space-y-1 min-w-0 flex-1 sm:flex-none">
+                                  <p className="text-xs sm:text-sm font-medium truncate">{request.requester.full_name}</p>
                                   <p className="text-xs text-muted-foreground">
                                   {new Date(request.created_at).toLocaleString("fr-FR", {
                                     dateStyle: "medium",
                                     timeStyle: "short",
                                   })}
                                   </p>
-                                  
-                                  <p className="text-xs text-muted-foreground">{request.description}</p>
+                                  <p className="text-xs text-muted-foreground line-clamp-2 sm:line-clamp-none">{request.description}</p>
                                 </div>
-                                <RequestDetailsModal request={request} />
+                                <div className="flex-shrink-0">
+                                  <RequestDetailsModal request={request} />
+                                </div>
                               </div>
-                            ))
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Demandes ({filteredActifs.length})</CardTitle>
-                        <CardDescription>
-                          Liste des demandes de bypass
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Code</TableHead>
-                              <TableHead>Équipement</TableHead>
-                              <TableHead>Capteur</TableHead>
-                              <TableHead>Demandeur</TableHead>
-                              <TableHead>Priorité</TableHead>
-                              <TableHead>Statut</TableHead>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {activeTab === "active" && paginatedList.length === 0 ? (
-                              <TableRow>
-                                <TableCell colSpan={8} className="text-center py-8">
-                                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                                  <p className="text-muted-foreground">Aucune demande trouvée.</p>
-                                </TableCell>
-                              </TableRow>
-                            ) : (
-                              activeTab === "active" && paginatedList.map((request) => (
-                                <TableRow key={request.id}>
-                                  <TableCell className="font-medium">{request.request_code}</TableCell>
-                                  <TableCell>{request.equipment.name}</TableCell>
-                                  <TableCell>{request.sensor.name}</TableCell>
-                                  <TableCell>{request.requester.full_name}</TableCell>
-                                  <TableCell>
-                                    <Badge variant="outline" className={getPriorityColor(request.priority)}>
-                                      {request.priority}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge className={getStatusColor(request.status)}>
-                                      {request.status}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                    {new Date(request.created_at).toLocaleString("fr-FR", {
-                                      dateStyle: "medium",
-                                      timeStyle: "short",
-                                    })}
-                                  </TableCell>
-                                  <TableCell>
-                                    <RequestDetailsModal request={request} />
-                                  </TableCell>
-                                </TableRow>
-                              ))
-                            )}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
 
                   {/* Pagination */}
                   {filteredActifs.length > 0 && totalPages > 1 && (
-                    <div className="flex justify-end items-center mt-6 float-right">
+                    <div className="flex justify-center sm:justify-end items-center mt-4 sm:mt-6 w-full min-w-0 overflow-x-hidden">
                       <Pagination>
-                        <PaginationContent>
+                        <PaginationContent className="flex-wrap min-w-0">
                           <PaginationItem>
                             <PaginationPrevious 
                               href="#"

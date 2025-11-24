@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useToast } from '@/hooks/use-toast';
 import { getAllZones, getEquipmentByZone } from '@/data/mockEquipment';
@@ -27,8 +28,10 @@ const Zones = () => {
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchZones = async () => {
+    setIsLoading(true);
     try {
       const response = await api.get('/zones').then(response => {
         if (response.data.data.length !== 0) {
@@ -45,12 +48,15 @@ const Zones = () => {
 
           setZones(formattedZones);
         }
+        setIsLoading(false);
       })
       .catch(error => {
         console.error('Error fetching data:', error);
+        setIsLoading(false);
       }); 
     } catch (error) {
       console.error("Erreur lors du GET zones :", error);
+      setIsLoading(false);
     }
   };
 
@@ -75,7 +81,6 @@ const Zones = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, itemsPerPage]);
-
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
@@ -169,29 +174,30 @@ const Zones = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6 space-x-6">
-      <div className="flex justify-between items-center p-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Gestion des Zones</h1>
-          <p className="text-muted-foreground">Gérez les zones et leurs superviseurs</p>
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 min-w-0 box-border">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words">Gestion des Zones</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground break-words">Gérez les zones et leurs superviseurs</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={openCreateDialog} className="gap-2">
-              <Plus className="w-4 h-4" />
-              Nouvelle Zone
+            <Button onClick={openCreateDialog} className="gap-2 w-full sm:w-auto text-sm">
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Nouvelle Zone</span>
+              <span className="sm:hidden">Nouvelle</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="text-lg sm:text-xl">
                 {editingZone ? 'Modifier la zone' : 'Créer une nouvelle zone'}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-sm">
                 {editingZone ? 'Modifiez les informations de la zone.' : 'Ajoutez une nouvelle zone au système.'}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 max-h-96 overflow-y-auto">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label htmlFor="name">Nom de la zone</Label>
@@ -216,11 +222,11 @@ const Zones = () => {
                   />
                 </div>
               </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">
                   Annuler
                 </Button>
-                <Button type="submit">
+                <Button type="submit" className="w-full sm:w-auto">
                   {editingZone ? 'Modifier' : 'Créer'}
                 </Button>
               </DialogFooter>
@@ -230,22 +236,22 @@ const Zones = () => {
       </div>
 
       {/* Filtres */}
-      <Card className='p-6'>
-        <CardHeader>
-          <CardTitle className="text-lg">Filtres</CardTitle>
+      <Card className='p-3 sm:p-4 w-full box-border'>
+        <CardHeader className="pb-2 sm:pb-3">
+          <CardTitle className="text-sm sm:text-base">Filtres</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
-              <Label htmlFor="search">Rechercher</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <CardContent className="w-full min-w-0">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end w-full min-w-0">
+            <div className="flex-1 w-full min-w-0 max-w-md sm:max-w-lg">
+              <Label htmlFor="search" className="text-xs sm:text-sm">Rechercher</Label>
+              <div className="relative w-full">
+                <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                 <Input
                   id="search"
                   placeholder="Nom ou description de la zone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-8 sm:pl-10 w-full text-sm"
                 />
               </div>
             </div>
@@ -255,15 +261,15 @@ const Zones = () => {
 
       {/* Contrôles de pagination et sélection du nombre d'éléments */}
       {filteredZones.length > 0 && (
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="items-per-page">Éléments par page:</Label>
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mt-3 sm:mt-4 w-full min-w-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <Label htmlFor="items-per-page" className="text-xs sm:text-sm whitespace-nowrap flex-shrink-0">Éléments par page:</Label>
               <Select 
                 value={itemsPerPage.toString()} 
                 onValueChange={(value) => setItemsPerPage(Number(value))}
               >
-                <SelectTrigger className="w-24">
+                <SelectTrigger className="w-16 sm:w-20 flex-shrink-0 h-8 text-xs sm:text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -275,175 +281,257 @@ const Zones = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2 border rounded-md p-1">
+            {/* Boutons de basculement - visibles seulement sur desktop */}
+            <div className="hidden lg:flex items-center gap-1 border rounded-md p-0.5">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('grid')}
-                className="h-8"
+                className="h-7"
+                title="Vue grille"
               >
-                <LayoutGrid className="h-4 w-4" />
+                <LayoutGrid className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Button>
               <Button
                 variant={viewMode === 'table' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('table')}
-                className="h-8"
+                className="h-7"
+                title="Vue tableau"
               >
-                <TableIcon className="h-4 w-4" />
+                <TableIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Button>
             </div>
           </div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-xs text-muted-foreground text-center sm:text-right">
             Affichage de {startIndex + 1} à {Math.min(endIndex, filteredZones.length)} sur {filteredZones.length} zone{filteredZones.length > 1 ? 's' : ''}
           </div>
         </div>
       )}
 
       {/* Liste des zones */}
-      {viewMode === 'grid' ? (
+      {isLoading ? (
+        /* Skeleton Loading - Vue grille */
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-3 md:gap-4 lg:gap-4 w-full min-w-0 ${viewMode === 'table' ? 'lg:hidden' : ''}`}>
+          {Array.from({ length: itemsPerPage }).map((_, index) => (
+            <Card key={index} className="flex flex-col h-full w-full min-w-0 box-border">
+              <CardHeader className="pb-3 p-3 sm:p-4 lg:p-4 min-w-0">
+                <div className="flex items-start justify-between gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Skeleton className="w-4 h-4 rounded-full" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <div className="flex gap-1">
+                    <Skeleton className="h-7 w-7" />
+                    <Skeleton className="h-7 w-7" />
+                  </div>
+                </div>
+                <Skeleton className="h-3 w-full mt-2" />
+              </CardHeader>
+              <CardContent className="space-y-2 p-3 sm:p-4 lg:p-4 pt-0 min-w-0">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-5 w-12" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Vue grille - toujours visible sur mobile, cachée sur desktop si viewMode est 'table' */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-3 md:gap-4 lg:gap-4 w-full min-w-0 ${viewMode === 'table' ? 'lg:hidden' : ''}`}>
             {paginatedZones.map((zone) => (
-              <Card key={zone.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-5 h-5 text-primary" />
-                      <CardTitle className="text-lg">{zone.name}</CardTitle>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(zone)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(zone.id)}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <CardDescription>{zone.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Équipements:</span>
-                    <Badge variant="secondary">{zone.equipmentCount}</Badge>
-                  </div>
-                </CardContent>
-              </Card>
+          <Card key={zone.id} className="hover:shadow-lg transition-shadow flex flex-col h-full w-full min-w-0 box-border">
+            <CardHeader className="pb-3 p-3 sm:p-4 lg:p-4 min-w-0">
+              <div className="flex items-start justify-between gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <MapPin className="w-4 h-4 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                  <CardTitle className="text-sm sm:text-sm lg:text-base truncate min-w-0">{zone.name}</CardTitle>
+                </div>
+                <div className="flex gap-1 flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(zone)}
+                    className="h-7 w-7 sm:h-7 sm:w-7 p-0"
+                    title="Modifier"
+                  >
+                    <Edit2 className="w-3 h-3 sm:w-3 sm:h-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(zone.id)}
+                    className="h-7 w-7 sm:h-7 sm:w-7 p-0 text-destructive hover:text-destructive"
+                    title="Supprimer"
+                  >
+                    <Trash2 className="w-3 h-3 sm:w-3 sm:h-3" />
+                  </Button>
+                </div>
+              </div>
+              <CardDescription className="text-xs sm:text-xs line-clamp-2 mt-2">{zone.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 p-3 sm:p-4 lg:p-4 pt-0 min-w-0">
+              <div className="flex items-center justify-between min-w-0">
+                <span className="text-xs sm:text-sm text-muted-foreground truncate">Équipements:</span>
+                <Badge variant="secondary" className="text-xs sm:text-sm flex-shrink-0">{zone.equipmentCount}</Badge>
+              </div>
+            </CardContent>
+          </Card>
             ))}
           </div>
-
-          {filteredZones.length === 0 && (
-            <Card className="p-12 text-center">
-              <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                {zones.length === 0 ? 'Aucune zone' : 'Aucun résultat'}
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                {zones.length === 0 
-                  ? 'Commencez par créer votre première zone.'
-                  : 'Aucune zone ne correspond à vos critères de recherche.'
-                }
-              </p>
-              {zones.length === 0 && (
-                <Button onClick={openCreateDialog}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Créer une zone
-                </Button>
-              )}
-            </Card>
+          
+          {/* Vue tableau - visible seulement sur desktop quand viewMode est 'table' */}
+          {viewMode === 'table' && (
+        <Card className="w-full min-w-0 box-border hidden lg:block">
+          <CardHeader className="p-3 sm:p-4">
+            <CardTitle className="text-sm sm:text-base">Zones ({filteredZones.length})</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 sm:p-3 w-full min-w-0 overflow-hidden">
+            <div className="w-full min-w-0">
+              <Table className="w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs sm:text-sm">Nom</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Description</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Équipements</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedZones.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-6 sm:py-8">
+                        <MapPin className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-base sm:text-lg font-semibold mb-2">
+                          {zones.length === 0 ? 'Aucune zone' : 'Aucun résultat'}
+                        </h3>
+                        <p className="text-sm sm:text-base text-muted-foreground mb-4">
+                          {zones.length === 0 
+                            ? 'Commencez par créer votre première zone.'
+                            : 'Aucune zone ne correspond à vos critères de recherche.'
+                          }
+                        </p>
+                        {zones.length === 0 && (
+                          <Button onClick={openCreateDialog} className="w-full sm:w-auto">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Créer une zone
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedZones.map((zone) => (
+                      <TableRow key={zone.id}>
+                        <TableCell className="font-medium text-sm max-w-[150px] sm:max-w-none">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
+                            <span className="truncate">{zone.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm max-w-xs truncate min-w-0">{zone.description}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <Badge variant="secondary" className="text-xs sm:text-sm">{zone.equipmentCount}</Badge>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className="flex gap-1 sm:gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(zone)}
+                              className="h-8 w-8 p-0"
+                              title="Modifier"
+                            >
+                              <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(zone.id)}
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
           )}
         </>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Zones ({filteredZones.length})</CardTitle>
+      )}
+
+      {/* Skeleton Loading - Vue tableau */}
+      {isLoading && viewMode === 'table' && (
+        <Card className="w-full min-w-0 box-border hidden lg:block">
+          <CardHeader className="p-3 sm:p-4">
+            <Skeleton className="h-5 w-32" />
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Équipements</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedZones.length === 0 ? (
+          <CardContent className="p-0 sm:p-3 w-full min-w-0 overflow-hidden">
+            <div className="w-full min-w-0">
+              <Table className="w-full">
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8">
-                      <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">
-                        {zones.length === 0 ? 'Aucune zone' : 'Aucun résultat'}
-                      </h3>
-                      <p className="text-muted-foreground mb-4">
-                        {zones.length === 0 
-                          ? 'Commencez par créer votre première zone.'
-                          : 'Aucune zone ne correspond à vos critères de recherche.'
-                        }
-                      </p>
-                      {zones.length === 0 && (
-                        <Button onClick={openCreateDialog}>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Créer une zone
-                        </Button>
-                      )}
-                    </TableCell>
+                    <TableHead className="text-xs sm:text-sm">Nom</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Description</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Équipements</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  paginatedZones.map((zone) => (
-                    <TableRow key={zone.id}>
-                      <TableCell className="font-medium">
-                        {zone.name}
-                      </TableCell>
-                      <TableCell>{zone.description}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{zone.equipmentCount}</Badge>
-                      </TableCell>
+                </TableHeader>
+                <TableBody>
+                  {Array.from({ length: itemsPerPage }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-12" /></TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(zone)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(zone.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <Skeleton className="h-8 w-8" />
+                          <Skeleton className="h-8 w-8" />
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
+        </Card>
+      )}
+
+      {!isLoading && filteredZones.length === 0 && (
+        <Card className="p-6 sm:p-12 text-center">
+          <MapPin className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-base sm:text-lg font-semibold mb-2">
+            {zones.length === 0 ? 'Aucune zone' : 'Aucun résultat'}
+          </h3>
+          <p className="text-sm sm:text-base text-muted-foreground mb-4">
+            {zones.length === 0 
+              ? 'Commencez par créer votre première zone.'
+              : 'Aucune zone ne correspond à vos critères de recherche.'
+            }
+          </p>
+          {zones.length === 0 && (
+            <Button onClick={openCreateDialog} className="w-full sm:w-auto">
+              <Plus className="w-4 h-4 mr-2" />
+              Créer une zone
+            </Button>
+          )}
         </Card>
       )}
 
       {/* Pagination */}
       {filteredZones.length > 0 && totalPages > 1 && (
-        <div className="flex justify-end items-center mt-6 float-right">
+        <div className="flex justify-center sm:justify-end items-center mt-4 sm:mt-6 w-full min-w-0 overflow-x-hidden">
           <Pagination>
-            <PaginationContent>
+            <PaginationContent className="flex-wrap min-w-0">
               <PaginationItem>
                 <PaginationPrevious 
                   href="#"
