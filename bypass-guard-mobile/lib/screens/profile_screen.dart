@@ -174,9 +174,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onPressed: _updateProfile,
                         child: const Text('Enregistrer'),
                       ),
-                    ] else if (user.phone != null) {
-                      _buildInfoRow('Téléphone', user.phone!),
-                    },
+                    ] else if (user.phone != null) ...[
+                        ListTile(
+                          leading: const Icon(Icons.phone),
+                          title: const Text('Téléphone'),
+                          subtitle: Text(user.phone ?? ''),
+                        ),
+                      ]
                   ],
                 ),
               ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/request_provider.dart';
 import '../widgets/loading_widget.dart';
-import '../widgets/error_widget.dart';
+import '../widgets/custom_error_widget.dart';
 import '../widgets/empty_state_widget.dart';
 import '../widgets/request_card.dart';
 
@@ -35,7 +35,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           }
 
           if (provider.errorMessage != null) {
-            return ErrorWidget(
+            return CustomErrorWidget(
               message: provider.errorMessage!,
               onRetry: () => provider.loadAllRequests(),
             );

@@ -16,6 +16,7 @@ use App\Notifications\RequestCreate;
 use Carbon\Carbon;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Notification;
+use OpenApi\Attributes as OA;
 // use Log;
 
 class RequestController extends Controller
@@ -50,6 +51,37 @@ class RequestController extends Controller
     }
 
 
+    #[OA\Get(
+        path: "/requests",
+        summary: "Liste des demandes",
+        description: "Récupère la liste des demandes de bypass avec filtres optionnels. Les non-administrateurs ne voient que leurs propres demandes.",
+        tags: ["Demandes"],
+        security: [["sanctum" => []]],
+        parameters: [
+            new OA\Parameter(name: "status", in: "query", description: "Filtrer par statut", schema: new OA\Schema(type: "string", enum: ["pending", "approved", "rejected", "in_progress", "completed"])),
+            new OA\Parameter(name: "priority", in: "query", description: "Filtrer par priorité", schema: new OA\Schema(type: "string", enum: ["low", "normal", "high", "critical", "emergency"])),
+            new OA\Parameter(name: "search", in: "query", description: "Rechercher dans titre, description ou code", schema: new OA\Schema(type: "string")),
+            new OA\Parameter(name: "page", in: "query", description: "Numéro de page", schema: new OA\Schema(type: "integer", example: 1)),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Liste des demandes paginée",
+                content: new OA\MediaType(
+                    mediaType: "application/json",
+                    schema: new OA\Schema(
+                        type: "object",
+                        properties: [
+                            new OA\Property(property: "data", type: "array", items: new OA\Items(ref: "#/components/schemas/Request")),
+                            new OA\Property(property: "current_page", type: "integer"),
+                            new OA\Property(property: "total", type: "integer"),
+                        ]
+                    )
+                )
+            ),
+            new OA\Response(response: 401, description: "Non authentifié", ref: "#/components/schemas/Error"),
+        ]
+    )]
     public function index(HttpRequest $request)
     {
         $query = Request::with(['validator','requester', 'validator', 'equipment.zone', 'sensor']);
@@ -138,6 +170,48 @@ class RequestController extends Controller
         }
     }
 
+    #[OA\Post(
+        path: "/requests",
+        summary: "Créer une demande de bypass",
+        description: "Crée une nouvelle demande de bypass avec toutes les informations nécessaires",
+        tags: ["Demandes"],
+        security: [["sanctum" => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: "application/json",
+                schema: new OA\Schema(
+                    required: ["reason", "detailedJustification", "urgencyLevel", "equipmentId", "sensorId", "plannedStartDate", "estimatedDuration", "safetyImpact", "operationalImpact", "environmentalImpact", "mitigationMeasures"],
+                    properties: [
+                        new OA\Property(property: "reason", type: "string", example: "preventive_maintenance"),
+                        new OA\Property(property: "detailedJustification", type: "string", example: "Justification détaillée de la demande"),
+                        new OA\Property(property: "urgencyLevel", type: "string", enum: ["low", "normal", "high", "critical", "emergency"], example: "high"),
+                        new OA\Property(property: "equipmentId", type: "integer", example: 1),
+                        new OA\Property(property: "sensorId", type: "integer", example: 1),
+                        new OA\Property(property: "plannedStartDate", type: "string", format: "date-time", example: "2025-01-20T10:00:00Z"),
+                        new OA\Property(property: "estimatedDuration", type: "integer", example: 2),
+                        new OA\Property(property: "safetyImpact", type: "string", enum: ["very_low", "low", "medium", "high", "very_high"], example: "medium"),
+                        new OA\Property(property: "operationalImpact", type: "string", enum: ["very_low", "low", "medium", "high", "very_high"], example: "medium"),
+                        new OA\Property(property: "environmentalImpact", type: "string", enum: ["very_low", "low", "medium", "high", "very_high"], example: "low"),
+                        new OA\Property(property: "mitigationMeasures", type: "array", items: new OA\Items(type: "string"), example: ["Mesure 1", "Mesure 2"]),
+                        new OA\Property(property: "contingencyPlan", type: "string", nullable: true, example: "Plan de contingence"),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: "Demande créée avec succès",
+                content: new OA\MediaType(
+                    mediaType: "application/json",
+                    schema: new OA\Schema(ref: "#/components/schemas/Request")
+                )
+            ),
+            new OA\Response(response: 422, description: "Erreur de validation", ref: "#/components/schemas/Error"),
+            new OA\Response(response: 401, description: "Non authentifié", ref: "#/components/schemas/Error"),
+        ]
+    )]
     public function store(CreateRequestRequest $request)
     {
         Log::info($request);
@@ -234,6 +308,28 @@ class RequestController extends Controller
         return response()->json($bypassRequest->load(['validator','requester', 'validator', 'equipment.zone', 'sensor']), 201);
     }
 
+    #[OA\Get(
+        path: "/requests/{request}",
+        summary: "Détails d'une demande",
+        description: "Récupère les détails d'une demande spécifique",
+        tags: ["Demandes"],
+        security: [["sanctum" => []]],
+        parameters: [
+            new OA\Parameter(name: "request", in: "path", required: true, description: "ID de la demande", schema: new OA\Schema(type: "integer")),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Détails de la demande",
+                content: new OA\MediaType(
+                    mediaType: "application/json",
+                    schema: new OA\Schema(ref: "#/components/schemas/Request")
+                )
+            ),
+            new OA\Response(response: 403, description: "Non autorisé", ref: "#/components/schemas/Error"),
+            new OA\Response(response: 404, description: "Demande non trouvée", ref: "#/components/schemas/Error"),
+        ]
+    )]
     public function show(Request $request)
     {
         $user = auth()->user();
@@ -246,6 +342,41 @@ class RequestController extends Controller
         return response()->json($request->load(['requester', 'validator', 'equipment', 'sensor']));
     }
 
+    #[OA\Put(
+        path: "/requests/{request}/validate",
+        summary: "Valider ou rejeter une demande",
+        description: "Permet à un superviseur ou administrateur de valider ou rejeter une demande de bypass",
+        tags: ["Demandes"],
+        security: [["sanctum" => []]],
+        parameters: [
+            new OA\Parameter(name: "request", in: "path", required: true, description: "ID de la demande", schema: new OA\Schema(type: "integer")),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: "application/json",
+                schema: new OA\Schema(
+                    required: ["validation_status"],
+                    properties: [
+                        new OA\Property(property: "validation_status", type: "string", enum: ["approved", "rejected"], example: "approved"),
+                        new OA\Property(property: "rejection_reason", type: "string", nullable: true, example: "Raison du rejet si applicable"),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Demande validée/rejetée avec succès",
+                content: new OA\MediaType(
+                    mediaType: "application/json",
+                    schema: new OA\Schema(ref: "#/components/schemas/Request")
+                )
+            ),
+            new OA\Response(response: 403, description: "Non autorisé à valider", ref: "#/components/schemas/Error"),
+            new OA\Response(response: 422, description: "Erreur de validation", ref: "#/components/schemas/Error"),
+        ]
+    )]
     public function validate(ValidateRequestRequest $httpRequest, Request $request)
     {
         $data = $httpRequest->validated();
@@ -257,6 +388,22 @@ class RequestController extends Controller
             'rejection_reason' => $data['rejection_reason'] ?? null,
         ]);
 
+        // Si la requête est approuvée, désactiver le capteur
+        if ($data['validation_status'] === 'approved') {
+            $sensor = $request->sensor;
+            if ($sensor) {
+                $sensor->update(['status' => 'inactive']);
+                
+                AuditLog::log(
+                    'Sensor Deactivated',
+                    auth()->user(),
+                    'Sensor',
+                    $sensor->id,
+                    ['reason' => 'Bypass request approved', 'request_id' => $request->id]
+                );
+            }
+        }
+        
         AuditLog::log(
             'Request ' . ucfirst($data['validation_status']),
             auth()->user(),
@@ -298,6 +445,28 @@ class RequestController extends Controller
         return response()->json($request->load(['requester', 'validator', 'equipment', 'sensor']));
     }
 
+    #[OA\Get(
+        path: "/requests/mine",
+        summary: "Mes demandes",
+        description: "Récupère toutes les demandes créées par l'utilisateur connecté",
+        tags: ["Demandes"],
+        security: [["sanctum" => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Liste des demandes de l'utilisateur",
+                content: new OA\MediaType(
+                    mediaType: "application/json",
+                    schema: new OA\Schema(
+                        type: "object",
+                        properties: [
+                            new OA\Property(property: "data", type: "array", items: new OA\Items(ref: "#/components/schemas/Request")),
+                        ]
+                    )
+                )
+            ),
+        ]
+    )]
     public function mine()
     {
         $requests = Request::with(['requester', 'equipment.zone', 'sensor', 'validator'])
@@ -308,6 +477,29 @@ class RequestController extends Controller
         return response()->json($requests);
     }
 
+    #[OA\Get(
+        path: "/requests/pending",
+        summary: "Demandes en attente de validation",
+        description: "Récupère les demandes en attente de validation. Accessible aux superviseurs et administrateurs.",
+        tags: ["Demandes"],
+        security: [["sanctum" => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Liste des demandes en attente",
+                content: new OA\MediaType(
+                    mediaType: "application/json",
+                    schema: new OA\Schema(
+                        type: "object",
+                        properties: [
+                            new OA\Property(property: "data", type: "array", items: new OA\Items(ref: "#/components/schemas/Request")),
+                        ]
+                    )
+                )
+            ),
+            new OA\Response(response: 403, description: "Non autorisé", ref: "#/components/schemas/Error"),
+        ]
+    )]
     public function pending()
     {
         if (!auth()->user()->canValidateRequests()) {
@@ -330,6 +522,29 @@ class RequestController extends Controller
         return response()->json($requests);
     }
 
+    #[OA\Get(
+        path: "/requests/active",
+        summary: "Demandes actives",
+        description: "Récupère les demandes actives (approuvées ou en cours). Accessible aux superviseurs et administrateurs.",
+        tags: ["Demandes"],
+        security: [["sanctum" => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Liste des demandes actives",
+                content: new OA\MediaType(
+                    mediaType: "application/json",
+                    schema: new OA\Schema(
+                        type: "object",
+                        properties: [
+                            new OA\Property(property: "data", type: "array", items: new OA\Items(ref: "#/components/schemas/Request")),
+                        ]
+                    )
+                )
+            ),
+            new OA\Response(response: 403, description: "Non autorisé", ref: "#/components/schemas/Error"),
+        ]
+    )]
     public function validate_list()
     {
         if (!auth()->user()->canValidateRequests()) {
@@ -385,6 +600,32 @@ class RequestController extends Controller
         return response()->json($request->load(['equipment', 'sensor']));
     }
 
+    #[OA\Delete(
+        path: "/requests/{request}",
+        summary: "Supprimer une demande",
+        description: "Supprime une demande. Seul le demandeur ou un administrateur peut supprimer. Les demandes déjà traitées ne peuvent pas être supprimées.",
+        tags: ["Demandes"],
+        security: [["sanctum" => []]],
+        parameters: [
+            new OA\Parameter(name: "request", in: "path", required: true, description: "ID de la demande", schema: new OA\Schema(type: "integer")),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Demande supprimée avec succès",
+                content: new OA\MediaType(
+                    mediaType: "application/json",
+                    schema: new OA\Schema(
+                        properties: [
+                            new OA\Property(property: "message", type: "string", example: "Demande supprimée avec succès"),
+                        ]
+                    )
+                )
+            ),
+            new OA\Response(response: 403, description: "Non autorisé", ref: "#/components/schemas/Error"),
+            new OA\Response(response: 422, description: "Impossible de supprimer une demande déjà traitée", ref: "#/components/schemas/Error"),
+        ]
+    )]
     public function destroy(Request $request)
     {
         $user = auth()->user();

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../models/user.dart';
 import '../widgets/loading_widget.dart';
-import '../widgets/error_widget.dart';
+import '../widgets/custom_error_widget.dart';
 import '../widgets/empty_state_widget.dart';
 
 class UsersScreen extends StatefulWidget {
@@ -35,7 +35,7 @@ class _UsersScreenState extends State<UsersScreen> {
           }
 
           if (provider.errorMessage != null) {
-            return ErrorWidget(
+            return CustomErrorWidget(
               message: provider.errorMessage!,
               onRetry: () => provider.loadUsers(),
             );

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/request_provider.dart';
 import '../../widgets/loading_widget.dart';
-import '../../widgets/error_widget.dart';
+import '../../widgets/custom_error_widget.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../widgets/request_card.dart';
 
@@ -69,7 +69,7 @@ class _RequestsListScreenState extends State<RequestsListScreen>
         }
 
         if (provider.errorMessage != null) {
-          return ErrorWidget(
+          return CustomErrorWidget(
             message: provider.errorMessage!,
             onRetry: () => provider.loadMyRequests(),
           );
@@ -111,7 +111,7 @@ class _RequestsListScreenState extends State<RequestsListScreen>
         }
 
         if (provider.errorMessage != null) {
-          return ErrorWidget(
+          return CustomErrorWidget(
             message: provider.errorMessage!,
             onRetry: () => provider.loadAllRequests(),
           );
