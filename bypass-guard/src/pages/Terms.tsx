@@ -3,13 +3,13 @@ import { FileText } from "lucide-react";
 
 const Terms = () => {
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <FileText className="w-8 h-8 text-primary" />
+        <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-primary shrink-0" />
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Conditions d'utilisation</h1>
-          <p className="text-muted-foreground">Politique et conditions d'utilisation du système Bypass Guard</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Conditions d'utilisation</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Politique et conditions d'utilisation du système Bypass Guard</p>
         </div>
       </div>
 

@@ -166,41 +166,38 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tableau de bord</h1>
-          <p className="text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 min-w-0 box-border">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words">Tableau de bord</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground break-words">
             Vue d'ensemble du système Bypass Guard
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button asChild>
-            <Link to="/requests/new">
-              <FileText className="w-4 h-4 mr-2" />
-              Nouvelle demande
-            </Link>
-            
-          </Button>
-        </div>
+        <Button asChild className="w-full sm:w-auto text-sm h-8 sm:h-9">
+          <Link to="/requests/new" className="flex items-center justify-center">
+            <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
+            Nouvelle demande
+          </Link>
+        </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
         {stats.map((stat) => (
-          <Card key={stat.title} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+          <Card key={stat.title} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
+              <CardTitle className="text-xs sm:text-sm font-medium truncate min-w-0 flex-1">
                 {stat.title}
               </CardTitle>
-              <div className={`p-2 rounded-full ${stat.bgColor}`}>
-                <stat.icon className={`w-4 h-4 ${stat.color}`} />
+              <div className={`p-1.5 sm:p-2 rounded-full ${stat.bgColor} flex-shrink-0 ml-2`}>
+                <stat.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${stat.color}`} />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <div className="text-xl sm:text-2xl font-bold">{stat.value}</div>
+              <p className="text-xs text-muted-foreground mt-1">
                 {stat.description}
               </p>
             </CardContent>
@@ -208,46 +205,46 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2 w-full min-w-0">
         {/* Recent requests */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5" />
-                Demandes récentes
+        <Card className="w-full min-w-0 box-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Activity className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                <span className="truncate">Demandes récentes</span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Les dernières demandes de bypass soumises
               </CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4">
             {requestList?.slice(0, 3).map((request) => (
-              <div key={request.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{request.request_code}</span>
-                    <Badge variant="outline" className={getPriorityColor(request.priority)}>
+              <div key={request.id} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors min-w-0">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-xs sm:text-sm truncate">{request.request_code}</span>
+                    <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs"}>
                       {request.priority}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{request.equipment.name}</p>
-                  <p className="text-xs text-muted-foreground">{request.sensor.name}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{request.equipment.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{request.sensor.name}</p>
                 </div>
-                <div className="text-right space-y-1">
-                  <Badge className={getStatusColor(request.status)}>
+                <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 sm:gap-1 flex-shrink-0">
+                  <Badge className={getStatusColor(request.status) + " text-xs"}>
                     {request.status}
                   </Badge>
-                  <p className="text-xs text-muted-foreground">{request.requester.full_name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{request.requester.full_name}</p>
                 </div>
               </div>
             ))}
-            <div className="pt-2 border-t">
-              <Button variant="ghost" className="w-full justify-center" asChild>
-                <Link to="/requests">
+            <div className="pt-2 sm:pt-3 border-t">
+              <Button variant="ghost" className="w-full justify-center text-sm h-8 sm:h-9" asChild>
+                <Link to="/requests" className="flex items-center justify-center">
                   Voir toutes les demandes
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-2" />
                 </Link>
               </Button>
             </div>
@@ -255,44 +252,44 @@ export default function Dashboard() {
         </Card>
 
         {/* System status */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5" />
-              État du système
+        <Card className="w-full min-w-0 box-border">
+          <CardHeader className="p-3 sm:p-4">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Shield className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+              <span className="truncate">État du système</span>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Surveillance en temps réel
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Équipements surveillés</span>
-                <div className="flex items-center gap-2">
+          <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4">
+            <div className="space-y-2 sm:space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs sm:text-sm truncate">Équipements surveillés</span>
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="w-2 h-2 rounded-full bg-success"></div>
-                  <span className="text-sm font-medium">{monitoring} actifs</span>
+                  <span className="text-xs sm:text-sm font-medium">{monitoring} actifs</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Capteurs en ligne</span>
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs sm:text-sm truncate">Capteurs en ligne</span>
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="w-2 h-2 rounded-full bg-success"></div>
-                  <span className="text-sm font-medium">{online} connectés</span>
+                  <span className="text-xs sm:text-sm font-medium">{online} connectés</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Alertes actives</span>
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs sm:text-sm truncate">Alertes actives</span>
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="w-2 h-2 rounded-full bg-warning"></div>
-                  <span className="text-sm font-medium">{active} en cours</span>
+                  <span className="text-xs sm:text-sm font-medium">{active} en cours</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Performance système</span>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-success" />
-                  <span className="text-sm font-medium">{systeme}%</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs sm:text-sm truncate">Performance système</span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-success" />
+                  <span className="text-xs sm:text-sm font-medium">{systeme}%</span>
                 </div>
               </div>
             </div>
