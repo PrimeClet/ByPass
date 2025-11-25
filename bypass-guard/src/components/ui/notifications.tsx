@@ -144,7 +144,7 @@ export default function Tinting({ userId, notification, onNotificationUpdate }) 
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-64 p-0">
+      <DropdownMenuContent align="end" className="w-70 p-0">
         <DropdownMenuLabel className="flex items-center justify-between w-full">
           <span>Notifications</span>
           {notifications?.filter(n => !n.read_at).length > 0 && (
@@ -216,7 +216,7 @@ export default function Tinting({ userId, notification, onNotificationUpdate }) 
 
       {/* Dialog pour afficher le contenu complet */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[200px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">
               {selectedNotification && getMaintenanceLabel(selectedNotification.data.title)}

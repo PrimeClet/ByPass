@@ -280,11 +280,12 @@ export function AppSidebar() {
                       {expandedGroups.demandes && !collapsed && (
                         <div className="ml-4 space-y-1 border-l border-sidebar-border/30 pl-4">
                           {item.items.map((subItem) => (
-                            <SidebarMenuButton key={subItem.url} asChild>
+                            <SidebarMenuButton key={subItem.url} asChild isActive={currentPath === subItem.url}>
                               <NavLink 
                                 to={subItem.url} 
                                 className={({ isActive }) => getNavClass(isActive)}
                                 onClick={handleLinkClick}
+                                end
                               >
                                 <subItem.icon className="w-4 h-4" />
                                 <span className="text-sm">{subItem.title}</span>
@@ -300,11 +301,12 @@ export function AppSidebar() {
                       )}
                     </div>
                   ) : (
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild isActive={currentPath === item.url || (item.url === '/' ? currentPath === '/' : false)}>
                       <NavLink 
                         to={item.url} 
                         className={({ isActive }) => getNavClass(isActive)}
                         onClick={handleLinkClick}
+                        end={item.url === '/'}
                       >
                         <item.icon className="w-4 h-4" />
                         {!collapsed && (
@@ -339,11 +341,12 @@ export function AppSidebar() {
               .filter((item) => item.role.includes(user.role))
               .map((item) => (
                 <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild isActive={currentPath === item.url}>
                     <NavLink 
                       to={item.url} 
                       className={({ isActive }) => getNavClass(isActive)}
                       onClick={handleLinkClick}
+                      end
                     >
                       <item.icon className="w-4 h-4" />
                       {!collapsed && (
@@ -378,11 +381,12 @@ export function AppSidebar() {
               .filter((item) => item.role.includes(user.role))
               .map((item) => (
                 <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild isActive={currentPath === item.url}>
                     <NavLink 
                       to={item.url} 
                       className={({ isActive }) => getNavClass(isActive)}
                       onClick={handleLinkClick}
+                      end
                     >
                       <item.icon className="w-4 h-4" />
                       {!collapsed && (
@@ -414,11 +418,12 @@ export function AppSidebar() {
             .filter((item) => item.role.includes(user.role))
             .map((item) => (
               <SidebarMenuItem key={item.url}>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild isActive={currentPath === item.url}>
                   <NavLink 
                     to={item.url} 
                     className={({ isActive }) => getNavClass(isActive)}
                     onClick={handleLinkClick}
+                    end
                   >
                     <item.icon className="w-4 h-4" />
                     {!collapsed && (
