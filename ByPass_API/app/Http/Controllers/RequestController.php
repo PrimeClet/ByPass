@@ -170,6 +170,81 @@ class RequestController extends Controller
         }
     }
 
+    public function sendInteractiveMediaMessages(string $to, string $bodyText, array $quickReplies): void
+    {
+        $baseUrl = config('services.whapi.base_url');
+        $token = config('services.whapi.token');
+        
+        if (!$token) return;
+        
+        $buttons = [];
+        foreach ($quickReplies as $reply) {
+            $button = [
+                'type' => $reply['type'] ?? 'quick_reply',
+                'id' => $reply['id'],
+                'title' => $reply['title']
+            ];
+            
+            if (isset($reply['url'])) $button['url'] = $reply['url'];
+            if (isset($reply['phone_number'])) $button['phone_number'] = $reply['phone_number'];
+            
+            $buttons[] = $button;
+        }
+         
+        $payload = [
+            'to' => $to,
+            'header' => [
+                'text' => "ByPass Systeme de Notification"
+            ],
+            'body' => ['text' => $bodyText],
+            'type' => 'button',
+            'action' => ['buttons' => $buttons]
+        ];
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $token,
+                'Content-Type' => 'application/json'
+            ])->post($baseUrl . '/messages/interactive', $payload);
+           
+            if ($response->successful()) {
+                Log::info('Message media envoyé', ['to' => $to]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Exception envoi media', ['error' => $e->getMessage()]);
+        }
+    }
+
+
+    private function getReasonLabel(string $key): string
+    {
+        $reasonLabels = [
+            'preventive_maintenance' => 'Maintenance préventive',
+            'corrective_maintenance' => 'Maintenance corrective',
+            'calibration' => 'Étalonnage',
+            'testing' => 'Tests',
+            'emergency_repair' => 'Réparation d\'urgence',
+            'system_upgrade' => 'Mise à niveau système',
+            'investigation' => 'Investigation',
+            'other' => 'Autre'
+        ];
+
+        return $reasonLabels[$key] ?? $key;
+    }
+
+    private function getUrgencyLabel(string $key): string
+    {
+        $urgencyLabels = [
+            'low' => 'Faible',
+            'normal' => 'Normale',
+            'high' => 'Élevée',
+            'critical' => 'Critique',
+            'emergency' => 'Urgence'
+        ];
+
+        return $urgencyLabels[$key] ?? $key;
+    }
+
     #[OA\Post(
         path: "/requests",
         summary: "Créer une demande de bypass",
@@ -268,8 +343,8 @@ class RequestController extends Controller
 
         $message = "📌 *Nouvelle Demande Créée*\n" .
            "👤 Demandeur : {$byPass->requester->full_name}\n" .
-           "📝 Titre : {$byPass->title}\n" .
-           "⚡ Priorité : {$byPass->priority}\n" .
+           "📝 Titre : {$this->getReasonLabel($byPass->title)}\n" .
+           "⚡ Priorité : {$this->getUrgencyLabel($byPass->priority)}\n" .
            "📅 Soumis le : " . now()->format('d/m/Y H:i') . "\n" .
            "🔍 Statut : En cours de validation.";
 
@@ -283,17 +358,22 @@ class RequestController extends Controller
 
         $adminMessage = "📌 *Nouvelle Demande à Valider*\n" .
                 "👤 Demandeur : {$byPass->requester->full_name}\n" .
-                "📝 Titre : {$byPass->title}\n" .
-                "⚡ Priorité : {$byPass->priority}\n" .
+                "📝 Titre : {$this->getReasonLabel($byPass->title)}\n" .
+                "⚡ Priorité : {$this->getUrgencyLabel($byPass->priority)}\n".
                 "📅 Soumis le : " . now()->format('d/m/Y H:i') . "\n" .
                 "🔍 Statut : En attente de votre validation.\n" .
                 "📂 Consultez la demande dans le système pour plus de détails.";
+
+        $quickReplies = [
+            ['id' => 'web', 'title' => '🌐 Listes à valider', 'type' => 'url', 'url' => env('APP_URL').'/validation']
+        ];
+                
 
         // Send the message to each administrator
         foreach ($users as $user) {
             if ($user->phone) {
                 $adminPhone = ltrim($user->phone, '+');
-                $this->sendTextMessage($adminPhone, $adminMessage);
+                $this->sendInteractiveMediaMessages($adminPhone, $adminMessage, $quickReplies);
             }
         }
 
@@ -420,6 +500,13 @@ class RequestController extends Controller
 
         // Préparer les messages
         $status = ucfirst($data['validation_status']); // Approved ou Rejected
+        
+        if($status === 'Approved'){
+            $status = 'Approuvée';
+        } else{
+            $status = 'Rejetée';
+        }
+
         $requesterMessage = "📌 *Notification : Requête {$status}*\n" .
                             "📝 Titre : {$request->title}\n" .
                             "⚡ Statut : {$status}\n" .

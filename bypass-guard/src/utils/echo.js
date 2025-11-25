@@ -15,7 +15,7 @@ const echo = new Echo({
     cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
     forceTLS: true,
 
-    authEndpoint: "https://bypass-api.jobs-conseil.tech/broadcasting/auth",
+    authEndpoint: "http://127.0.0.1:8001/broadcasting/auth",
 
     auth: {
         headers: {
