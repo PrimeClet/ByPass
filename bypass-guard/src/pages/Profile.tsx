@@ -5,11 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { User, Mail, Phone, Shield, Calendar, Eye, EyeOff, Save, Edit, Lock } from 'lucide-react';
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { User, Mail, Phone, Shield, Calendar, Eye, EyeOff, Save, Edit, Lock, UserCircle, ArrowLeft } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
 import { toast } from 'sonner';
 import api from '../axios';
+import { Link } from 'react-router-dom';
 
 const Profile: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.user);
@@ -116,6 +118,43 @@ const Profile: React.FC = () => {
   if (!user) {
     return (
       <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
+        {/* Header avec breadcrumb */}
+        <Card className="bg-card rounded-lg border">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                {/* Icône */}
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                  <UserCircle className="w-6 h-6 text-white" />
+                </div>
+                {/* Titre, description et breadcrumb */}
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words mb-1">Mon Profil</h1>
+                  <p className="text-xs sm:text-sm text-muted-foreground break-words mb-2">Gérez vos informations personnelles</p>
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem>
+                        <BreadcrumbLink asChild>
+                          <Link to="/">Tableau de bord</Link>
+                        </BreadcrumbLink>
+                      </BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage>Mon Profil</BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
+              </div>
+              {/* Bouton retour */}
+              <Button variant="outline" size="icon" className="flex-shrink-0 rounded-full w-10 h-10" asChild>
+                <Link to="/">
+                  <ArrowLeft className="w-4 h-4" />
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
         <Card className="w-full min-w-0 box-border">
           <CardContent className="p-6 sm:p-12 text-center">
             <p className="text-sm sm:text-base text-muted-foreground">Aucune information utilisateur disponible.</p>
@@ -127,20 +166,54 @@ const Profile: React.FC = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 min-w-0 box-border">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words">Mon Profil</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground break-words">Gérez vos informations personnelles</p>
-        </div>
+      {/* Header avec breadcrumb */}
+      <Card className="bg-card rounded-lg border">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              {/* Icône */}
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                <UserCircle className="w-6 h-6 text-white" />
+              </div>
+              {/* Titre, description et breadcrumb */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words mb-1">Mon Profil</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground break-words mb-2">Gérez vos informations personnelles</p>
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>
+                        <Link to="/">Tableau de bord</Link>
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>Mon Profil</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+            </div>
+            {/* Bouton retour */}
+            <Button variant="outline" size="icon" className="flex-shrink-0 rounded-full w-10 h-10" asChild>
+              <Link to="/">
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+        {/* Bouton modifier */}
         {!isEditing && (
-          <Button onClick={() => setIsEditing(true)} className="gap-2 w-full sm:w-auto text-sm">
-            <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Modifier le profil</span>
-            <span className="sm:hidden">Modifier</span>
-          </Button>
+          <div className="flex justify-end mr-2">
+            <Button onClick={() => setIsEditing(true)} className="gap-2 text-sm">
+              <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Modifier le profil</span>
+              <span className="sm:hidden">Modifier</span>
+            </Button>
+          </div>
         )}
-      </div>
 
       {/* Contenu principal dans une seule Card */}
       <Card className="w-full min-w-0 box-border">

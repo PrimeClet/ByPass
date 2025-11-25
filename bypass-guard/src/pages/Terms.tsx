@@ -1,17 +1,49 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText } from "lucide-react";
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import { FileText, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Terms = () => {
   return (
-    <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-primary shrink-0" />
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Conditions d'utilisation</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Politique et conditions d'utilisation du système Bypass Guard</p>
-        </div>
-      </div>
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
+      {/* Header avec breadcrumb */}
+      <Card className="bg-card rounded-lg border">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              {/* Icône */}
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              {/* Titre, description et breadcrumb */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words mb-1">Conditions d'utilisation</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground break-words mb-2">Politique et conditions d'utilisation du système Bypass Guard</p>
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>
+                        <Link to="/">Tableau de bord</Link>
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>Conditions d'utilisation</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+            </div>
+            {/* Bouton retour */}
+            <Button variant="outline" size="icon" className="flex-shrink-0 rounded-full w-10 h-10" asChild>
+              <Link to="/">
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Content */}
       <Card>

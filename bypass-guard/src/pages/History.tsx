@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { 
   History as HistoryIcon,
   Search,
@@ -41,6 +43,7 @@ export default function History() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>(isMobile ? 'grid' : 'grid');
+  const [isLoading, setIsLoading] = useState(true);
 
   const filteredHistory = (requestList ?? []).filter(item => {
     const matchesSearch = item.equipment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -102,15 +105,18 @@ export default function History() {
 
 
   useEffect(() => {
+    setIsLoading(true);
     api.get('/dashboard/recent-requests')
     .then(response => {
       // Handle successful response
       console.log(response.data); // The fetched data is typically in response.data
-      setRequestList(response.data)    
+      setRequestList(response.data);
+      setIsLoading(false);
     })
     .catch(error => {
       // Handle error
       console.error('Error fetching data:', error);
+      setIsLoading(false);
     });
     
 
@@ -128,31 +134,61 @@ export default function History() {
   }
 
   return (
-    <div className="flex-1 space-y-3 sm:space-y-4 md:space-y-6 p-3 sm:p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-        <div className="w-full sm:w-auto">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Historique des demandes</h1>
-          <p className="text-xs sm:text-sm md:text-base text-muted-foreground mt-1">
-            Journal d'audit et historique des validations
-          </p>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button variant="outline" size={isMobile ? "sm" : "default"} className="w-full sm:w-auto flex-shrink-0">
-            <Download className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Exporter</span>
-          </Button>
-        </div>
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
+      {/* Header avec breadcrumb */}
+      <Card className="bg-card rounded-lg border">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              {/* Icône */}
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                <HistoryIcon className="w-6 h-6 text-white" />
+              </div>
+              {/* Titre, description et breadcrumb */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words mb-1">Historique des demandes</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground break-words mb-2">Journal d'audit et historique des validations</p>
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>
+                        <Link to="/">Tableau de bord</Link>
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>Historique</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+            </div>
+            {/* Bouton retour */}
+            <Button variant="outline" size="icon" className="flex-shrink-0 rounded-full w-10 h-10" asChild>
+              <Link to="/">
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bouton exporter */}
+      <div className="flex justify-end">
+        <Button variant="outline" size={isMobile ? "sm" : "default"} className="gap-2">
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">Exporter</span>
+        </Button>
       </div>
 
       {/* Filters */}
       <Card>
-          <CardHeader className="p-4 sm:p-6">
+          {/* <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg md:text-xl">
               <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             Filtres de recherche
           </CardTitle>
-        </CardHeader>
+        </CardHeader> */}
         <CardContent className="p-4 sm:p-6">
           <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <div className="relative sm:col-span-2 lg:col-span-1">
@@ -204,7 +240,7 @@ export default function History() {
       </Card>
 
       {/* Contrôles de pagination et sélection du nombre d'éléments */}
-      {filteredHistory.length > 0 && (
+      {!isLoading && filteredHistory.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
             <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -253,126 +289,161 @@ export default function History() {
       )}
 
       {/* History list */}
-      {viewMode === 'grid' ? (
-        <Card>
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg md:text-xl">
-              <HistoryIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-              Historique ({filteredHistory.length})
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm mt-1">
-              Toutes les demandes traitées
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="space-y-3 sm:space-y-4">
-              {paginatedHistory.length === 0 ? (
-                <div className="text-center py-8">
-                  <HistoryIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">
-                    {requestList.length === 0 ? 'Aucune demande' : 'Aucun résultat'}
-                  </h3>
-                  <p className="text-muted-foreground">
-                    {requestList.length === 0 
-                      ? 'Aucune demande dans l\'historique.'
-                      : 'Aucune demande ne correspond à vos critères de recherche.'
-                    }
-                  </p>
-                </div>
-              ) : (
-                paginatedHistory.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className="p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-2 sm:mb-3 gap-2">
-                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                        <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex-shrink-0">
-                          {getStatusIcon(item.status)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
-                            <span className="font-medium text-sm sm:text-base truncate">{item.request_code}</span>
-                            <Badge className={getStatusColor(item.status)}>
-                              <span className="text-xs">{item.status}</span>
-                            </Badge>
-                          </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground truncate">{item.equipment.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{item.sensor.name}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 text-xs sm:text-sm">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
-                          <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                          <span className="text-xs sm:text-sm">Demandeur:</span>
-                        </div>
-                        <p className="break-words pl-5 sm:pl-6">{item.requester.full_name}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
-                          <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                          <span className="text-xs sm:text-sm">Demande:</span>
-                        </div>
-                        <p className="break-words pl-5 sm:pl-6 text-xs sm:text-sm">
-                        {new Date(item.created_at).toLocaleString("fr-FR", {
-                              dateStyle: isMobile ? "short" : "medium",
-                              timeStyle: "short",
-                            })}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
-                          <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                          <span className="text-xs sm:text-sm">Validation:</span>
-                        </div>
-                        <p className="break-words pl-5 sm:pl-6 text-xs sm:text-sm">
-                        {new Date(item.validated_at).toLocaleString("fr-FR", {
-                              dateStyle: isMobile ? "short" : "medium",
-                              timeStyle: "short",
-                            })}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t">
-                      <div className="flex flex-col gap-2 text-xs sm:text-sm">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
-                        <div className="w-full sm:w-auto">
-                          <span className="text-muted-foreground">Validateur: </span>
-                            <span className="font-medium break-words">{item.validator?.full_name || 'N/A'}</span>
-                        </div>
-                        <div className="w-full sm:w-auto">
-                          <span className="text-muted-foreground">Durée: </span>
-                            <span className="font-medium">{Math.round(diffInHours(item.end_time, item.start_time))}h</span>
-                        </div>
-                      </div>
-                      {item.comments && (
-                          <div className="mt-1 sm:mt-2">
-                          <span className="text-muted-foreground text-xs">Commentaires: </span>
-                            <p className="text-xs text-muted-foreground italic break-words mt-1">{item.commentaires}</p>
-                        </div>
-                      )}
+      {isLoading ? (
+        <>
+          {/* Skeleton Loading - Vue grille */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3 md:gap-4 w-full min-w-0 ${viewMode === 'table' ? 'lg:hidden' : ''}`}>
+            {Array.from({ length: itemsPerPage }).map((_, index) => (
+              <Card key={index} className="flex flex-col h-full w-full min-w-0 box-border">
+                <CardHeader className="pb-4 p-6 min-w-0">
+                  <div className="flex items-start justify-between gap-1.5 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <Skeleton className="w-8 h-8 rounded-full" />
+                      <div className="min-w-0 flex-1">
+                        <Skeleton className="h-5 w-32 mb-2" />
+                        <Skeleton className="h-5 w-20" />
                       </div>
                     </div>
                   </div>
-                ))
-              )}
+                  <Skeleton className="h-4 w-full mt-2" />
+                </CardHeader>
+                <CardContent className="space-y-2 p-6 pt-0 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-3 w-12" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          {/* Skeleton Loading - Vue tableau */}
+          {viewMode === 'table' && (
+            <Card className="w-full min-w-0 box-border hidden lg:block">
+              <CardHeader className="p-3 sm:p-4">
+                <Skeleton className="h-5 w-32" />
+              </CardHeader>
+              <CardContent className="p-0 sm:p-3 w-full min-w-0 overflow-hidden">
+                <div className="w-full min-w-0">
+                  <Table className="w-full min-w-[700px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs sm:text-sm">Code</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Équipement</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Capteur</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Demandeur</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Date</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Statut</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.from({ length: itemsPerPage }).map((_, index) => (
+                        <TableRow key={index}>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                          <TableCell>
+                            <Skeleton className="h-8 w-8" />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      ) : viewMode === 'grid' ? (
+        <>
+          {/* Vue grille - toujours visible sur mobile, cachée sur desktop si viewMode est 'table' */}
+          {!isLoading && paginatedHistory.length === 0 ? (
+            <Card>
+              <CardContent className="p-6 sm:p-12 text-center">
+                <HistoryIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">
+                  {requestList.length === 0 ? 'Aucune demande' : 'Aucun résultat'}
+                </h3>
+                <p className="text-muted-foreground">
+                  {requestList.length === 0 
+                    ? 'Aucune demande dans l\'historique.'
+                    : 'Aucune demande ne correspond à vos critères de recherche.'
+                  }
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3 md:gap-4 w-full min-w-0">
+              {paginatedHistory.map((item) => (
+                <Card key={item.id} className="hover:shadow-lg transition-shadow flex flex-col h-full w-full min-w-0 box-border">
+                  <CardHeader className="pb-4 p-6 min-w-0">
+                    <div className="flex items-start justify-between gap-1.5 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 flex-shrink-0">
+                          {getStatusIcon(item.status)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="text-lg truncate min-w-0">{item.request_code}</CardTitle>
+                          <Badge className={`${getStatusColor(item.status)} mt-1`}>
+                            <span className="text-xs">{item.status}</span>
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <CardDescription className="text-xs line-clamp-2 mt-1.5">
+                      {item.equipment.name} - {item.sensor.name}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2 p-6 pt-0 min-w-0">
+                    <div className="flex items-center justify-between min-w-0">
+                      <span className="text-xs text-muted-foreground truncate">Demandeur:</span>
+                      <span className="text-xs truncate ml-2">{item.requester.full_name}</span>
+                    </div>
+                    <div className="flex items-center justify-between min-w-0">
+                      <span className="text-xs text-muted-foreground truncate">Validateur:</span>
+                      <span className="text-xs truncate ml-2">{item.validator?.full_name || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center justify-between min-w-0">
+                      <span className="text-xs text-muted-foreground truncate">Durée:</span>
+                      <span className="text-xs truncate ml-2">{Math.round(diffInHours(item.end_time, item.start_time))}h</span>
+                    </div>
+                    <div className="flex items-center justify-between min-w-0">
+                      <span className="text-xs text-muted-foreground truncate">Date:</span>
+                      <span className="text-xs truncate ml-2">
+                        {new Date(item.created_at).toLocaleDateString("fr-FR", {
+                          dateStyle: isMobile ? "short" : "medium"
+                        })}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </>
       ) : (
-        <Card>
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg md:text-xl">
-              <HistoryIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-              Historique ({filteredHistory.length})
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm mt-1">
-              Toutes les demandes traitées
-            </CardDescription>
+        <>
+          {/* Vue tableau - visible seulement sur desktop quand viewMode est 'table' */}
+          {viewMode === 'table' && (
+        <Card className="w-full min-w-0 box-border hidden lg:block">
+          <CardHeader className="p-3 sm:p-4">
+            <CardTitle className="text-sm sm:text-base">Historique ({filteredHistory.length})</CardTitle>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
             <div className="overflow-x-auto -mx-4 sm:mx-0">
@@ -446,6 +517,8 @@ export default function History() {
             </div>
           </CardContent>
         </Card>
+          )}
+        </>
       )}
 
       {/* Pagination */}

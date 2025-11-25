@@ -9,11 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Plus, Pencil, Trash2, Search, Settings, Gauge, LayoutGrid, Table as TableIcon } from 'lucide-react';
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Plus, Pencil, Trash2, Search, Settings, Gauge, LayoutGrid, Table as TableIcon, ArrowLeft } from 'lucide-react';
 import { mockEquipment } from '@/data/mockEquipment';
 import { Sensor, SensorType, SensorStatus } from '@/types/equipment';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Link } from 'react-router-dom';
 import type { Equipment, EquipmentType, EquipmentStatus, CriticalityLevel, Zone } from '@/types/equipment';
 import api from '../axios'
 
@@ -48,6 +51,7 @@ const Sensors: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>(isMobile ? 'grid' : 'grid');
+  const [isLoading, setIsLoading] = useState(true);
 
   // Flatten all sensors from all equipment
   // const allSensors = equipmentData.flatMap(equipment => 
@@ -88,6 +92,7 @@ const Sensors: React.FC = () => {
   };
 
   const fetchSensor = async () => {
+    setIsLoading(true);
     try {
       const response = await api.get('/sensors').then(response => {
         const data = response.data.data
@@ -113,13 +118,16 @@ const Sensors: React.FC = () => {
 
           setSensor(formattedEquips)
         }
+        setIsLoading(false);
         // console.log(response);
       })
       .catch(error => {
         console.error('Error fetching data:', error);
+        setIsLoading(false);
       }); 
     } catch (error) {
-      console.error("Erreur lors du GET zones :", error);
+      console.error("Erreur lors du GET sensors :", error);
+      setIsLoading(false);
     }
   };
 
@@ -310,15 +318,119 @@ const Sensors: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 space-y-3 sm:space-y-4 md:space-y-6 p-3 sm:p-4 md:p-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-        <div className="w-full sm:w-auto">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Gestion des Capteurs</h1>
-          <p className="text-xs sm:text-sm md:text-base text-muted-foreground mt-1">
-            Gérez les capteurs et leurs configurations
-          </p>
-        </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
+      {/* Header avec breadcrumb */}
+      <Card className="bg-card rounded-lg border">
+        <CardContent className="p-3 sm:p-4 md:p-6">
+          <div className="flex items-center justify-between gap-2 sm:gap-4 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
+              {/* Icône */}
+              <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                <Gauge className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              {/* Titre, description et breadcrumb */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground break-words mb-1 truncate">Gestion des Capteurs</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground break-words mb-2 line-clamp-1">Gérez les capteurs et leurs configurations</p>
+                <Breadcrumb>
+                  <BreadcrumbList className="flex-wrap">
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>
+                        <Link to="/" className="truncate">Tableau de bord</Link>
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage className="truncate">Capteurs</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+            </div>
+            {/* Bouton retour */}
+            <Button variant="outline" size="icon" className="flex-shrink-0 rounded-full w-9 h-9 sm:w-10 sm:h-10" asChild>
+              <Link to="/">
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filtres */}
+      <Card>
+        {/* <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Filtres</CardTitle>
+        </CardHeader> */}
+        <CardContent className="p-3 sm:p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center justify-between w-full min-w-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 flex-1 w-full min-w-0">
+              <div className="sm:col-span-2 lg:col-span-1 w-full min-w-0">
+                {/* <Label htmlFor="search" className="text-xs sm:text-sm">Rechercher</Label> */}
+                <div className="relative">
+                  <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground z-10" />
+                  <Input
+                    id="search"
+                    placeholder="Nom, code ou équipement..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 sm:pl-10 text-xs sm:text-sm md:text-base w-full min-w-0"
+                  />
+                </div>
+              </div>
+              <div className="w-full min-w-0">
+                {/* <Label htmlFor="equipment-filter" className="text-xs sm:text-sm">Équipement</Label> */}
+                <Select value={selectedEquipment} onValueChange={setSelectedEquipment}>
+                  <SelectTrigger className="w-full text-xs sm:text-sm md:text-base min-w-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les équipements</SelectItem>
+                    {equipment.map(equipment => (
+                      <SelectItem key={equipment.id} value={equipment.id}>
+                        {equipment.name} - {equipment.zone}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-full min-w-0">
+                {/* <Label htmlFor="type-filter" className="text-xs sm:text-sm">Type</Label> */}
+                <Select value={selectedType} onValueChange={setSelectedType}>
+                  <SelectTrigger className="w-full text-xs sm:text-sm md:text-base min-w-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les types</SelectItem>
+                    <SelectItem value="temperature">Température</SelectItem>
+                    <SelectItem value="vibration">Vibration</SelectItem>
+                    <SelectItem value="pressure">Pression</SelectItem>
+                    <SelectItem value="flow">Débit</SelectItem>
+                    <SelectItem value="level">Niveau</SelectItem>
+                    <SelectItem value="speed">Vitesse</SelectItem>
+                    <SelectItem value="current">Courant</SelectItem>
+                    <SelectItem value="voltage">Tension</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-full min-w-0">
+                {/* <Label htmlFor="status-filter" className="text-xs sm:text-sm">Statut</Label> */}
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger className="w-full text-xs sm:text-sm md:text-base min-w-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les statuts</SelectItem>
+                    <SelectItem value="active">Actif</SelectItem>
+                    <SelectItem value="bypassed">Contourné</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                    <SelectItem value="faulty">Défaillant</SelectItem>
+                    <SelectItem value="calibration">Calibrage</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
           setIsAddDialogOpen(open);
           if (!open) {
             setEditingSensor(null);
@@ -336,10 +448,10 @@ const Sensors: React.FC = () => {
           }
         }}>
           <DialogTrigger asChild>
-            <Button className="gap-2 w-full sm:w-auto" size={isMobile ? "sm" : "default"}>
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Ajouter un capteur</span>
-              <span className="sm:hidden">Ajouter</span>
+                <Button className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10" size={isMobile ? "sm" : "default"}>
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline truncate">Ajouter un capteur</span>
+              <span className="sm:hidden truncate">Ajouter</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
@@ -384,14 +496,6 @@ const Sensors: React.FC = () => {
                     className="text-sm sm:text-base"
                   />
                 </div>
-                {/* <div className="space-y-2">
-                  <Label htmlFor="code">Code</Label>
-                  <Input
-                    id="code"
-                    value={newSensor.code}
-                    onChange={(e) => setNewSensor({...newSensor, code: e.target.value})}
-                  />
-                </div> */}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -423,36 +527,7 @@ const Sensors: React.FC = () => {
                   />
                 </div>
               </div>
-              {/* <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="minValue">Valeur min</Label>
-                  <Input
-                    id="minValue"
-                    type="number"
-                    value={newSensor.minValue}
-                    onChange={(e) => setNewSensor({...newSensor, minValue: Number(e.target.value)})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxValue">Valeur max</Label>
-                  <Input
-                    id="maxValue"
-                    type="number"
-                    value={newSensor.maxValue}
-                    onChange={(e) => setNewSensor({...newSensor, maxValue: Number(e.target.value)})}
-                  />
-                </div>
-              </div> */}
               <div className="grid grid-cols-1 gap-4">
-                {/* <div className="space-y-2">
-                  <Label htmlFor="warningThreshold">Seuil d'alerte</Label>
-                  <Input
-                    id="warningThreshold"
-                    type="number"
-                    value={newSensor.warningThreshold}
-                    onChange={(e) => setNewSensor({...newSensor, warningThreshold: Number(e.target.value)})}
-                  />
-                </div> */}
                 <div className="space-y-2">
                   <Label htmlFor="criticalThreshold" className="text-sm">Seuil critique</Label>
                   <Input
@@ -504,87 +579,14 @@ const Sensors: React.FC = () => {
                 </Button>
               </DialogFooter>
             </form>
-          </DialogContent>
+              </DialogContent>
         </Dialog>
-      </div>
-
-      {/* Filtres */}
-      <Card>
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="text-base sm:text-lg">Filtres</CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="sm:col-span-2 lg:col-span-1">
-              <Label htmlFor="search" className="text-xs sm:text-sm">Rechercher</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-                <Input
-                  id="search"
-                  placeholder="Nom, code ou équipement..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 text-sm sm:text-base"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="equipment-filter" className="text-xs sm:text-sm">Équipement</Label>
-              <Select value={selectedEquipment} onValueChange={setSelectedEquipment}>
-                <SelectTrigger className="w-full text-sm sm:text-base">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les équipements</SelectItem>
-                  {equipment.map(equipment => (
-                    <SelectItem key={equipment.id} value={equipment.id}>
-                      {equipment.name} - {equipment.zone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="type-filter" className="text-xs sm:text-sm">Type</Label>
-              <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="w-full text-sm sm:text-base">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les types</SelectItem>
-                  <SelectItem value="temperature">Température</SelectItem>
-                  <SelectItem value="vibration">Vibration</SelectItem>
-                  <SelectItem value="pressure">Pression</SelectItem>
-                  <SelectItem value="flow">Débit</SelectItem>
-                  <SelectItem value="level">Niveau</SelectItem>
-                  <SelectItem value="speed">Vitesse</SelectItem>
-                  <SelectItem value="current">Courant</SelectItem>
-                  <SelectItem value="voltage">Tension</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="status-filter" className="text-xs sm:text-sm">Statut</Label>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-full text-sm sm:text-base">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les statuts</SelectItem>
-                  <SelectItem value="active">Actif</SelectItem>
-                  <SelectItem value="bypassed">Contourné</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="faulty">Défaillant</SelectItem>
-                  <SelectItem value="calibration">Calibrage</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Contrôles de pagination et sélection du nombre d'éléments */}
-      {filteredSensors.length > 0 && (
+      {!isLoading && filteredSensors.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
             <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -626,25 +628,116 @@ const Sensors: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="text-xs sm:text-sm text-muted-foreground text-left sm:text-right w-full sm:w-auto">
+          <div className="text-xs sm:text-sm text-muted-foreground text-left sm:text-right w-full sm:w-auto truncate whitespace-nowrap">
             Affichage de {startIndex + 1} à {Math.min(endIndex, filteredSensors.length)} sur {filteredSensors.length} capteur{filteredSensors.length > 1 ? 's' : ''}
           </div>
         </div>
       )}
 
       {/* Liste des capteurs */}
-      {viewMode === 'grid' ? (
+      {isLoading ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-            {paginatedSensors.map((sensor) => (
-              <Card key={sensor.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3 p-4 sm:p-6">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Gauge className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
-                      <CardTitle className="text-base sm:text-lg truncate">{sensor.name}</CardTitle>
+          {/* Skeleton Loading - Vue grille */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 lg:gap-6 w-full min-w-0 ${viewMode === 'table' ? 'lg:hidden' : ''}`}>
+            {Array.from({ length: itemsPerPage }).map((_, index) => (
+              <Card key={index} className="flex flex-col h-full w-full min-w-0 box-border">
+                <CardHeader className="pb-3 sm:pb-3 p-4 sm:p-5 md:p-6 min-w-0">
+                  <div className="flex items-start justify-between gap-1.5 sm:gap-2 min-w-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                      <Skeleton className="w-4 h-4 sm:w-5 sm:h-5 rounded" />
+                      <Skeleton className="h-4 sm:h-5 w-24 sm:w-32" />
                     </div>
-                    <div className="flex gap-1 flex-shrink-0">
+                    <div className="flex gap-0.5 flex-shrink-0">
+                      <Skeleton className="h-7 w-7 sm:h-8 sm:w-8" />
+                      <Skeleton className="h-7 w-7 sm:h-8 sm:w-8" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-3 sm:h-4 w-full mt-1.5 sm:mt-2" />
+                </CardHeader>
+                <CardContent className="space-y-1.5 sm:space-y-2 md:space-y-3 p-4 sm:p-5 md:p-6 pt-0 min-w-0">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-5 w-24" />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <Skeleton className="h-3 w-12" />
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <Skeleton className="h-3 w-12" />
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <Skeleton className="h-3 w-12" />
+                    <Skeleton className="h-5 w-12" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          {/* Skeleton Loading - Vue tableau */}
+          {viewMode === 'table' && (
+            <Card className="w-full min-w-0 box-border hidden lg:block">
+              <CardHeader className="p-2 sm:p-3 md:p-4">
+                <Skeleton className="h-5 w-32" />
+              </CardHeader>
+              <CardContent className="p-0 sm:p-2 md:p-3 w-full min-w-0 overflow-hidden">
+                <div className="w-full min-w-0">
+                  <Table className="w-full min-w-[700px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[100px] text-[10px] sm:text-xs md:text-sm">Nom</TableHead>
+                        <TableHead className="min-w-[80px] text-[10px] sm:text-xs md:text-sm hidden md:table-cell">Code</TableHead>
+                        <TableHead className="min-w-[80px] text-[10px] sm:text-xs md:text-sm hidden lg:table-cell">Type</TableHead>
+                        <TableHead className="min-w-[80px] text-[10px] sm:text-xs md:text-sm">Équipement</TableHead>
+                        <TableHead className="min-w-[80px] text-[10px] sm:text-xs md:text-sm hidden lg:table-cell">Unité</TableHead>
+                        <TableHead className="min-w-[80px] text-[10px] sm:text-xs md:text-sm">Statut</TableHead>
+                        <TableHead className="min-w-[60px] text-[10px] sm:text-xs md:text-sm hidden md:table-cell">Seuil critique</TableHead>
+                        <TableHead className="min-w-[80px] text-[10px] sm:text-xs md:text-sm">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.from({ length: itemsPerPage }).map((_, index) => (
+                        <TableRow key={index}>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                          <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-12" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                          <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Skeleton className="h-8 w-8" />
+                              <Skeleton className="h-8 w-8" />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      ) : viewMode === 'grid' ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 lg:gap-6 w-full min-w-0">
+            {paginatedSensors.map((sensor) => (
+              <Card key={sensor.id} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
+                <CardHeader className="pb-3 sm:pb-3 p-4 sm:p-5 md:p-6 min-w-0">
+                  <div className="flex items-start justify-between gap-1.5 sm:gap-2 min-w-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                      <Gauge className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                      <CardTitle className="text-sm sm:text-base md:text-lg truncate min-w-0">{sensor.name}</CardTitle>
+                    </div>
+                    <div className="flex gap-0.5 flex-shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -652,18 +745,18 @@ const Sensors: React.FC = () => {
                           handleEditSensor(sensor);
                           setIsAddDialogOpen(true);
                         }}
-                        className="h-8 w-8 p-0"
+                        className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                       >
-                        <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <Pencil className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-destructive hover:text-destructive"
                           >
-                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent className="w-[95vw] sm:w-full">
@@ -683,32 +776,32 @@ const Sensors: React.FC = () => {
                       </AlertDialog>
                     </div>
                   </div>
-                  <CardDescription className="text-xs sm:text-sm mt-2 break-words">{sensor.code} - {getTypeLabel(sensor.type)}</CardDescription>
+                  <CardDescription className="text-[10px] sm:text-xs md:text-sm mt-1.5 sm:mt-2 break-words line-clamp-2">{sensor.code} - {getTypeLabel(sensor.type)}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6 pt-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm text-muted-foreground">Équipement:</span>
-                    <Badge variant="outline" className="text-xs sm:text-sm truncate max-w-[60%]">{sensor.equipmentName || 'N/A'}</Badge>
+                <CardContent className="space-y-1.5 sm:space-y-2 md:space-y-3 p-4 sm:p-5 md:p-6 pt-0 min-w-0">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-[10px] sm:text-xs md:text-sm text-muted-foreground truncate">Équipement:</span>
+                    <Badge variant="outline" className="text-[10px] sm:text-xs md:text-sm truncate max-w-[60%] flex-shrink-0 whitespace-nowrap">{sensor.equipmentName || 'N/A'}</Badge>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm text-muted-foreground">Type:</span>
-                    <Badge variant="outline" className="text-xs sm:text-sm">{getTypeLabel(sensor.type)}</Badge>
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-[10px] sm:text-xs md:text-sm text-muted-foreground truncate">Type:</span>
+                    <Badge variant="outline" className="text-[10px] sm:text-xs md:text-sm flex-shrink-0 whitespace-nowrap">{getTypeLabel(sensor.type)}</Badge>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm text-muted-foreground">Statut:</span>
-                    <Badge variant={getStatusBadgeVariant(sensor.status)} className="text-xs sm:text-sm">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-[10px] sm:text-xs md:text-sm text-muted-foreground truncate">Statut:</span>
+                    <Badge variant={getStatusBadgeVariant(sensor.status)} className="text-[10px] sm:text-xs md:text-sm flex-shrink-0 whitespace-nowrap">
                       {getStatusLabel(sensor.status)}
                     </Badge>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm text-muted-foreground">Seuil critique:</span>
-                    <span className="text-xs sm:text-sm font-medium text-destructive">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-[10px] sm:text-xs md:text-sm text-muted-foreground truncate">Seuil critique:</span>
+                    <span className="text-[10px] sm:text-xs md:text-sm font-medium text-destructive truncate whitespace-nowrap flex-shrink-0">
                       {sensor.criticalThreshold} {sensor.unit}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm text-muted-foreground">État:</span>
-                    <Badge variant={sensor.isActive ? "default" : "secondary"} className="text-xs sm:text-sm">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-[10px] sm:text-xs md:text-sm text-muted-foreground truncate">État:</span>
+                    <Badge variant={sensor.isActive ? "default" : "secondary"} className="text-[10px] sm:text-xs md:text-sm flex-shrink-0 whitespace-nowrap">
                       {sensor.isActive ? "Actif" : "Inactif"}
                     </Badge>
                   </div>
@@ -717,21 +810,21 @@ const Sensors: React.FC = () => {
             ))}
           </div>
 
-          {filteredSensors.length === 0 && (
-            <Card className="p-6 sm:p-12 text-center">
-              <Gauge className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-base sm:text-lg font-semibold mb-2">
+          {!isLoading && filteredSensors.length === 0 && (
+            <Card className="p-4 sm:p-6 md:p-12 text-center">
+              <Gauge className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+              <h3 className="text-sm sm:text-base md:text-lg font-semibold mb-2">
                 {sensor.length === 0 ? 'Aucun capteur' : 'Aucun résultat'}
               </h3>
-              <p className="text-sm sm:text-base text-muted-foreground mb-4">
+              <p className="text-xs sm:text-sm md:text-base text-muted-foreground mb-3 sm:mb-4">
                 {sensor.length === 0 
                   ? 'Commencez par ajouter votre premier capteur.'
                   : 'Aucun capteur ne correspond à vos critères de recherche.'
                 }
               </p>
               {sensor.length === 0 && (
-                <Button onClick={() => setIsAddDialogOpen(true)} size={isMobile ? "sm" : "default"} className="w-full sm:w-auto">
-                  <Plus className="w-4 h-4 sm:mr-2" />
+                <Button onClick={() => setIsAddDialogOpen(true)} size={isMobile ? "sm" : "default"} className="w-full sm:w-auto text-xs sm:text-sm">
+                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Ajouter un capteur</span>
                   <span className="sm:hidden">Ajouter</span>
                 </Button>
@@ -741,25 +834,24 @@ const Sensors: React.FC = () => {
         </>
       ) : (
         <Card>
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="text-base sm:text-lg md:text-xl">Capteurs ({filteredSensors.length})</CardTitle>
+          <CardHeader className="p-2 sm:p-3 md:p-4">
+            <CardTitle className="text-xs sm:text-sm md:text-base">Capteurs ({filteredSensors.length})</CardTitle>
           </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="overflow-x-auto -mx-4 sm:mx-0">
-              <div className="inline-block min-w-full align-middle px-4 sm:px-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[120px] text-xs sm:text-sm">Nom</TableHead>
-                      <TableHead className="min-w-[100px] text-xs sm:text-sm hidden md:table-cell">Code</TableHead>
-                      <TableHead className="min-w-[150px] text-xs sm:text-sm">Équipement</TableHead>
-                      <TableHead className="min-w-[100px] text-xs sm:text-sm hidden lg:table-cell">Type</TableHead>
-                      <TableHead className="min-w-[100px] text-xs sm:text-sm">Statut</TableHead>
-                      <TableHead className="min-w-[100px] text-xs sm:text-sm hidden lg:table-cell">Seuil critique</TableHead>
-                      <TableHead className="min-w-[80px] text-xs sm:text-sm hidden md:table-cell">État</TableHead>
-                      <TableHead className="min-w-[100px] text-xs sm:text-sm">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
+          <CardContent className="p-0 sm:p-2 md:p-3 w-full min-w-0 overflow-x-auto">
+            <div className="w-full min-w-0">
+              <Table className="w-full min-w-[700px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[100px] text-[10px] sm:text-xs md:text-sm">Nom</TableHead>
+                    <TableHead className="min-w-[80px] text-[10px] sm:text-xs md:text-sm hidden md:table-cell">Code</TableHead>
+                    <TableHead className="min-w-[120px] text-[10px] sm:text-xs md:text-sm">Équipement</TableHead>
+                    <TableHead className="min-w-[80px] text-[10px] sm:text-xs md:text-sm hidden lg:table-cell">Type</TableHead>
+                    <TableHead className="min-w-[80px] text-[10px] sm:text-xs md:text-sm">Statut</TableHead>
+                    <TableHead className="min-w-[80px] text-[10px] sm:text-xs md:text-sm hidden lg:table-cell">Seuil critique</TableHead>
+                    <TableHead className="min-w-[60px] text-[10px] sm:text-xs md:text-sm hidden md:table-cell">État</TableHead>
+                    <TableHead className="min-w-[80px] text-[10px] sm:text-xs md:text-sm">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
                   <TableBody>
                     {paginatedSensors.length === 0 ? (
                       <TableRow>
@@ -861,7 +953,6 @@ const Sensors: React.FC = () => {
                     )}
                   </TableBody>
                 </Table>
-              </div>
             </div>
           </CardContent>
         </Card>
