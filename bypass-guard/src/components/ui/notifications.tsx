@@ -216,7 +216,7 @@ export default function Tinting({ userId, notification, onNotificationUpdate }) 
 
       {/* Dialog pour afficher le contenu complet */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="w-[200px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[70%] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">
               {selectedNotification && getMaintenanceLabel(selectedNotification.data.title)}

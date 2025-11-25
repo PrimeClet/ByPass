@@ -318,7 +318,7 @@ const Sensors: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
+    <div className="w-full p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
       {/* Header avec breadcrumb */}
       <Card className="bg-card rounded-lg border">
         <CardContent className="p-3 sm:p-4 md:p-6">

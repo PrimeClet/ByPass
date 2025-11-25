@@ -297,7 +297,7 @@ export default function Requests() {
   if (isNewRequest) {
     return (
       <div className="flex-1 space-y-3 sm:space-y-4 md:space-y-6 p-3 sm:p-4 md:p-6">
-        {/* Header avec navigation retour */}
+        {/* Header avec navigation retour - aligné avec le formulaire */}
         <div className="w-full max-w-4xl mx-auto">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div className="text-left w-full sm:w-auto">
@@ -324,7 +324,7 @@ export default function Requests() {
 
   // Sinon, afficher la liste des demandes
   return (
-    <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
+    <div className="w-full p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
       {/* Header avec breadcrumb */}
       <Card className="bg-card rounded-lg border">
         <CardContent className="p-4 sm:p-6">
@@ -614,52 +614,73 @@ export default function Requests() {
                 <div className="hidden lg:block space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
                   {activeTab === "all" && paginatedList.map((request) => (
                     <Card key={request.id} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
-                      <CardHeader className="p-3 sm:p-4">
-                        <div className="flex items-start justify-between gap-3 min-w-0">
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 flex-shrink-0">
-                              {getStatusIcon(request.status)}
+                      <CardContent className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                          {/* Section 1 : Identité de la demande */}
+                          <div className="flex items-start gap-3 sm:gap-4 flex-shrink-0">
+                            <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-100 flex-shrink-0">
+                              <div className="text-blue-600">
+                                {(request.status === "Approuvé" || request.status === "approved") ? (
+                                  <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+                                ) : getStatusIcon(request.status) ? (
+                                  <div className="w-5 h-5 sm:w-6 sm:h-6">
+                                    {getStatusIcon(request.status)}
+                                  </div>
+                                ) : (
+                                  <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
+                                )}
+                              </div>
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <CardTitle className="text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</CardTitle>
-                              <CardDescription className="text-xs sm:text-xs mt-1 min-w-0">
-                                {request.equipment?.name || 'N/A'} - {request.sensor?.name || 'N/A'}
-                              </CardDescription>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 sm:gap-3 flex-wrap mb-2">
+                                <CardTitle className="text-base sm:text-lg font-bold truncate min-w-0">
+                                  {request.request_code}
+                                </CardTitle>
+                                <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                  {request.priority}
+                                </Badge>
+                                <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                  {request.status}
+                                </Badge>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {request.equipment?.name || 'N/A'}
+                                </p>
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {request.sensor?.name || 'N/A'}
+                                </p>
+                              </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap"}>
-                              {request.priority}
-                            </Badge>
-                            <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap"}>
-                              {request.status}
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
-                        <div className="flex items-center justify-between gap-3 min-w-0">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">Demandeur:</span>
-                            <span className="text-xs sm:text-sm truncate">{request.requester?.full_name || 'N/A'}</span>
-                          </div>
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">Date:</span>
-                            <span className="text-xs sm:text-sm truncate whitespace-nowrap">
+
+                          {/* Section 2 : Demandeur + infos */}
+                          <div className="flex flex-col gap-2 sm:gap-3 flex-1 min-w-0 items-center sm:items-center">
+                            <p className="text-sm font-semibold text-center truncate">
+                              {request.requester?.full_name || 'N/A'}
+                            </p>
+                            <p className="text-xs sm:text-sm text-muted-foreground text-center whitespace-nowrap">
                               {new Date(request.created_at).toLocaleString("fr-FR", {
-                                dateStyle: "medium",
-                                timeStyle: "short",
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
                               })}
-                            </span>
+                            </p>
+                            {request.description && (
+                              <p className="text-xs sm:text-sm text-muted-foreground text-center line-clamp-2 max-w-[300px]">
+                                {request.description}
+                              </p>
+                            )}
                           </div>
-                        </div>
-                        {request.description && (
-                          <div className="mt-3 pt-3 border-t">
-                            <p className="text-xs text-muted-foreground line-clamp-2 min-w-0">{request.description}</p>
+
+                          {/* Section 3 : Action */}
+                          <div className="flex flex-col gap-2 sm:gap-3 flex-shrink-0 w-full sm:w-auto items-center sm:items-center">
+                            <div className="mt-2 flex justify-end">
+                              <RequestDetailsModal request={request} />
+                            </div>
                           </div>
-                        )}
-                        <div className="mt-3">
-                          <RequestDetailsModal request={request} />
                         </div>
                       </CardContent>
                     </Card>
@@ -824,73 +845,35 @@ export default function Requests() {
                 {/* Requests list - Grille mobile/tablette / Liste desktop */}
                 {isLoading() ? (
                   <>
-                    {/* Skeleton Loading - Vue grille mobile/tablette */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3 sm:gap-3 md:gap-4 w-full min-w-0">
-                      {Array.from({ length: itemsPerPage }).map((_, index) => (
-                        <Card key={index} className="flex flex-col h-full w-full min-w-0 box-border">
-                          <CardHeader className="pb-4 p-6 min-w-0">
-                            <div className="flex items-start justify-between gap-1.5 min-w-0">
-                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                <Skeleton className="w-6 h-6 rounded-full" />
-                                <div className="min-w-0 flex-1">
-                                  <Skeleton className="h-5 w-32 mb-2" />
-                                  <Skeleton className="h-4 w-24" />
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-3 flex-wrap">
-                              <Skeleton className="h-5 w-16" />
-                              <Skeleton className="h-5 w-20" />
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-1.5 p-6 pt-0 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <Skeleton className="h-3 w-20" />
-                              <Skeleton className="h-3 w-24" />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <Skeleton className="h-3 w-12" />
-                              <Skeleton className="h-3 w-28" />
-                            </div>
-                            <Skeleton className="h-3 w-full mt-2" />
-                            <Skeleton className="h-8 w-24 mt-2" />
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                    
-                    {/* Skeleton Loading - Vue liste desktop */}
-                    <div className="hidden lg:block space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
-                      {Array.from({ length: itemsPerPage }).map((_, index) => (
+                    {/* Skeleton Loading pour "Mes demandes" - Design selon image */}
+                    <div className="space-y-3 sm:space-y-4 w-full min-w-0">
+                      {activeTab === "mine" && Array.from({ length: itemsPerPage }).map((_, index) => (
                         <Card key={index} className="w-full min-w-0 box-border">
-                          <CardHeader className="p-3 sm:p-4">
-                            <div className="flex items-start justify-between gap-3 min-w-0">
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <Skeleton className="w-8 h-8 rounded-full" />
-                                <div className="min-w-0 flex-1">
-                                  <Skeleton className="h-4 w-32 mb-2" />
-                                  <Skeleton className="h-3 w-48" />
+                          <CardContent className="p-4 sm:p-6">
+                            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                              {/* Section gauche */}
+                              <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                                <Skeleton className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap mb-2">
+                                    <Skeleton className="h-5 sm:h-6 w-32" />
+                                    <Skeleton className="h-5 w-16" />
+                                    <Skeleton className="h-5 w-20" />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Skeleton className="h-4 w-40" />
+                                    <Skeleton className="h-4 w-48" />
+                                  </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <Skeleton className="h-5 w-16" />
-                                <Skeleton className="h-5 w-20" />
+                              {/* Section droite */}
+                              <div className="flex flex-col items-end gap-2 sm:gap-3 flex-shrink-0 w-full sm:w-auto">
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-3 w-28" />
+                                <Skeleton className="h-3 w-48" />
+                                <Skeleton className="h-8 w-20 mt-2" />
                               </div>
                             </div>
-                          </CardHeader>
-                          <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
-                            <div className="flex items-center justify-between gap-3 min-w-0">
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <Skeleton className="h-3 w-20" />
-                                <Skeleton className="h-3 w-32" />
-                              </div>
-                              <div className="flex items-center gap-2 min-w-0">
-                                <Skeleton className="h-3 w-12" />
-                                <Skeleton className="h-3 w-36" />
-                              </div>
-                            </div>
-                            <Skeleton className="h-3 w-full mt-3 pt-3" />
-                            <Skeleton className="h-8 w-28 mt-3" />
                           </CardContent>
                         </Card>
                       ))}
@@ -905,110 +888,83 @@ export default function Requests() {
                   </Card>
                 ) : (
                   <>
-                    {/* Vue grille pour mobile/tablette - cachée sur desktop */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3 sm:gap-3 md:gap-4 w-full min-w-0">
-                      {activeTab === "mine" && paginatedList.map((request) => (
-                        <Card key={request.id} className="hover:shadow-lg transition-shadow flex flex-col h-full w-full min-w-0 box-border">
-                          <CardHeader className="pb-4 p-6 min-w-0">
-                            <div className="flex items-start justify-between gap-1.5 min-w-0">
-                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 flex-shrink-0">
-                                  {getStatusIcon(request.status)}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <CardTitle className="text-lg truncate min-w-0">{request.request_code}</CardTitle>
-                                  <CardDescription className="text-xs line-clamp-2 mt-1.5 min-w-0">
-                                    {request.equipment?.name || 'N/A'} - {request.sensor?.name || 'N/A'}
-                                  </CardDescription>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-3 flex-wrap">
-                              <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap flex-shrink-0"}>
-                                {request.priority}
-                              </Badge>
-                              <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap flex-shrink-0"}>
-                                {request.status}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-1.5 p-6 pt-0 min-w-0">
-                            <div className="flex items-center justify-between min-w-0">
-                              <span className="text-xs text-muted-foreground truncate">Demandeur:</span>
-                              <span className="text-xs truncate">{request.requester ? request.requester.full_name : 'Moi'}</span>
-                            </div>
-                            <div className="flex items-center justify-between min-w-0">
-                              <span className="text-xs text-muted-foreground truncate">Date:</span>
-                              <span className="text-xs truncate whitespace-nowrap">
-                                {new Date(request.created_at).toLocaleString("fr-FR", {
-                                  dateStyle: "short",
-                                  timeStyle: "short",
-                                })}
-                              </span>
-                            </div>
-                            {request.description && (
-                              <div className="pt-1">
-                                <p className="text-xs text-muted-foreground line-clamp-2 min-w-0">{request.description}</p>
-                              </div>
-                            )}
-                            <div className="pt-2">
-                              <RequestDetailsModal request={request} />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                    
-                    {/* Vue liste pour desktop - cachée sur mobile/tablette */}
-                    <div className="hidden lg:block space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
+                    {/* Vue pour "Mes demandes" - Design selon image */}
+                    <div className="space-y-3 sm:space-y-4 w-full min-w-0">
                       {activeTab === "mine" && paginatedList.map((request) => (
                         <Card key={request.id} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
-                          <CardHeader className="p-3 sm:p-4">
-                            <div className="flex items-start justify-between gap-3 min-w-0">
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 flex-shrink-0">
-                                  {getStatusIcon(request.status)}
+                          <CardContent className="p-4 sm:p-6">
+                            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                              {/* Section 1 : Gauche - Icône + Code + Badges */}
+                              <div className="flex items-start gap-3 sm:gap-4 flex-shrink-0">
+                                {/* Icône circulaire avec status */}
+                                <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-100 flex-shrink-0">
+                                  <div className="text-blue-600">
+                                    {(request.status === "Approuvé" || request.status === "approved") ? (
+                                      <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+                                    ) : getStatusIcon(request.status) ? (
+                                      <div className="w-5 h-5 sm:w-6 sm:h-6">
+                                        {getStatusIcon(request.status)}
+                                      </div>
+                                    ) : (
+                                      <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                  <CardTitle className="text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</CardTitle>
-                                  <CardDescription className="text-xs sm:text-xs mt-1 min-w-0">
-                                    {request.equipment?.name || 'N/A'} - {request.sensor?.name || 'N/A'}
-                                  </CardDescription>
+                                {/* Code de demande et badges */}
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap mb-2">
+                                    <CardTitle className="text-base sm:text-lg font-bold truncate min-w-0">
+                                      {request.request_code}
+                                    </CardTitle>
+                                    <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                      {request.priority}
+                                    </Badge>
+                                    <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                      {request.status}
+                                    </Badge>
+                                  </div>
+                                  {/* Équipement et capteur sur deux lignes */}
+                                  <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground truncate">
+                                      {request.equipment?.name || 'N/A'}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground truncate">
+                                      {request.sensor?.name || 'N/A'}
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap"}>
-                                  {request.priority}
-                                </Badge>
-                                <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap"}>
-                                  {request.status}
-                                </Badge>
-                              </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
-                            <div className="flex items-center justify-between gap-3 min-w-0">
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">Demandeur:</span>
-                                <span className="text-xs sm:text-sm truncate">{request.requester ? request.requester.full_name : 'Moi'}</span>
-                              </div>
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">Date:</span>
-                                <span className="text-xs sm:text-sm truncate whitespace-nowrap">
+                              
+                              {/* Section 2 : Centre - Demandeur + Date + Description */}
+                              <div className="flex flex-col gap-2 sm:gap-3 flex-1 min-w-0 items-center sm:items-center">
+                                <p className="text-sm font-semibold text-center truncate">
+                                  {request.requester ? request.requester.full_name : 'Moi'}
+                                </p>
+                                {/* Date */}
+                                <p className="text-xs sm:text-sm text-muted-foreground text-center whitespace-nowrap">
                                   {new Date(request.created_at).toLocaleString("fr-FR", {
-                                    dateStyle: "medium",
-                                    timeStyle: "short",
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
                                   })}
-                                </span>
+                                </p>
+                                {/* Description */}
+                                {request.description && (
+                                  <p className="text-xs sm:text-sm text-muted-foreground text-center line-clamp-2 max-w-[300px]">
+                                    {request.description}
+                                  </p>
+                                )}
                               </div>
-                            </div>
-                            {request.description && (
-                              <div className="mt-3 pt-3 border-t">
-                                <p className="text-xs text-muted-foreground line-clamp-2 min-w-0">{request.description}</p>
+                              
+                              {/* Section 3 : Droite - Bouton */}
+                              <div className="flex flex-col gap-2 sm:gap-3 flex-shrink-0 w-full sm:w-auto items-center sm:items-center">
+                                {/* Bouton Voir */}
+                                <div className="mt-2 flex justify-end">
+                                  <RequestDetailsModal request={request} />
+                                </div>
                               </div>
-                            )}
-                            <div className="mt-3">
-                              <RequestDetailsModal request={request} />
                             </div>
                           </CardContent>
                         </Card>
@@ -1312,52 +1268,73 @@ export default function Requests() {
                       <div className="hidden lg:block space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
                         {activeTab === "pending" && paginatedList.map((request) => (
                           <Card key={request.id} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
-                            <CardHeader className="p-3 sm:p-4">
-                              <div className="flex items-start justify-between gap-3 min-w-0">
-                                <div className="flex items-center gap-3 min-w-0 flex-1">
-                                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 flex-shrink-0">
-                                    {getStatusIcon(request.status)}
+                            <CardContent className="p-4 sm:p-6">
+                              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                                {/* Section 1 */}
+                                <div className="flex items-start gap-3 sm:gap-4 flex-shrink-0">
+                                  <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-100 flex-shrink-0">
+                                    <div className="text-blue-600">
+                                      {(request.status === "Approuvé" || request.status === "approved") ? (
+                                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+                                      ) : getStatusIcon(request.status) ? (
+                                        <div className="w-5 h-5 sm:w-6 sm:h-6">
+                                          {getStatusIcon(request.status)}
+                                        </div>
+                                      ) : (
+                                        <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="min-w-0 flex-1">
-                                    <CardTitle className="text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</CardTitle>
-                                    <CardDescription className="text-xs sm:text-xs mt-1 min-w-0">
-                                      {request.equipment?.name || 'N/A'} - {request.sensor?.name || 'N/A'}
-                                    </CardDescription>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap mb-2">
+                                      <CardTitle className="text-base sm:text-lg font-bold truncate min-w-0">
+                                        {request.request_code}
+                                      </CardTitle>
+                                      <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                        {request.priority}
+                                      </Badge>
+                                      <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                        {request.status}
+                                      </Badge>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <p className="text-sm text-muted-foreground truncate">
+                                        {request.equipment?.name || 'N/A'}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground truncate">
+                                        {request.sensor?.name || 'N/A'}
+                                      </p>
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap"}>
-                                    {request.priority}
-                                  </Badge>
-                                  <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap"}>
-                                    {request.status}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
-                              <div className="flex items-center justify-between gap-3 min-w-0">
-                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  <span className="text-xs text-muted-foreground whitespace-nowrap">Demandeur:</span>
-                                  <span className="text-xs sm:text-sm truncate">{request.requester?.full_name || 'N/A'}</span>
-                                </div>
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <span className="text-xs text-muted-foreground whitespace-nowrap">Date:</span>
-                                  <span className="text-xs sm:text-sm truncate whitespace-nowrap">
+
+                                {/* Section 2 */}
+                                <div className="flex flex-col gap-2 sm:gap-3 flex-1 min-w-0 items-center sm:items-center">
+                                  <p className="text-sm font-semibold text-center truncate">
+                                    {request.requester?.full_name || 'N/A'}
+                                  </p>
+                                  <p className="text-xs sm:text-sm text-muted-foreground text-center whitespace-nowrap">
                                     {new Date(request.created_at).toLocaleString("fr-FR", {
-                                      dateStyle: "medium",
-                                      timeStyle: "short",
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
                                     })}
-                                  </span>
+                                  </p>
+                                  {request.description && (
+                                    <p className="text-xs sm:text-sm text-muted-foreground text-center line-clamp-2 max-w-[300px]">
+                                      {request.description}
+                                    </p>
+                                  )}
                                 </div>
-                              </div>
-                              {request.description && (
-                                <div className="mt-3 pt-3 border-t">
-                                  <p className="text-xs text-muted-foreground line-clamp-2 min-w-0">{request.description}</p>
+
+                                {/* Section 3 */}
+                                <div className="flex flex-col gap-2 sm:gap-3 flex-shrink-0 w-full sm:w-auto items-center sm:items-center">
+                                  <div className="mt-2 flex justify-end">
+                                    <RequestDetailsModal request={request} />
+                                  </div>
                                 </div>
-                              )}
-                              <div className="mt-3">
-                                <RequestDetailsModal request={request} />
                               </div>
                             </CardContent>
                           </Card>
@@ -1658,52 +1635,73 @@ export default function Requests() {
                       <div className="hidden lg:block space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
                         {activeTab === "active" && paginatedList.map((request) => (
                           <Card key={request.id} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
-                            <CardHeader className="p-3 sm:p-4">
-                              <div className="flex items-start justify-between gap-3 min-w-0">
-                                <div className="flex items-center gap-3 min-w-0 flex-1">
-                                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 flex-shrink-0">
-                                    {getStatusIcon(request.status)}
+                            <CardContent className="p-4 sm:p-6">
+                              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                                {/* Section 1 */}
+                                <div className="flex items-start gap-3 sm:gap-4 flex-shrink-0">
+                                  <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-100 flex-shrink-0">
+                                    <div className="text-blue-600">
+                                      {(request.status === "Approuvé" || request.status === "approved") ? (
+                                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+                                      ) : getStatusIcon(request.status) ? (
+                                        <div className="w-5 h-5 sm:w-6 sm:h-6">
+                                          {getStatusIcon(request.status)}
+                                        </div>
+                                      ) : (
+                                        <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="min-w-0 flex-1">
-                                    <CardTitle className="text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</CardTitle>
-                                    <CardDescription className="text-xs sm:text-xs mt-1 min-w-0">
-                                      {request.equipment?.name || 'N/A'} - {request.sensor?.name || 'N/A'}
-                                    </CardDescription>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap mb-2">
+                                      <CardTitle className="text-base sm:text-lg font-bold truncate min-w-0">
+                                        {request.request_code}
+                                      </CardTitle>
+                                      <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                        {request.priority}
+                                      </Badge>
+                                      <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                        {request.status}
+                                      </Badge>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <p className="text-sm text-muted-foreground truncate">
+                                        {request.equipment?.name || 'N/A'}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground truncate">
+                                        {request.sensor?.name || 'N/A'}
+                                      </p>
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap"}>
-                                    {request.priority}
-                                  </Badge>
-                                  <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap"}>
-                                    {request.status}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
-                              <div className="flex items-center justify-between gap-3 min-w-0">
-                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  <span className="text-xs text-muted-foreground whitespace-nowrap">Demandeur:</span>
-                                  <span className="text-xs sm:text-sm truncate">{request.requester?.full_name || 'N/A'}</span>
-                                </div>
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <span className="text-xs text-muted-foreground whitespace-nowrap">Date:</span>
-                                  <span className="text-xs sm:text-sm truncate whitespace-nowrap">
+
+                                {/* Section 2 */}
+                                <div className="flex flex-col gap-2 sm:gap-3 flex-1 min-w-0 items-center sm:items-center">
+                                  <p className="text-sm font-semibold text-center truncate">
+                                    {request.requester?.full_name || 'N/A'}
+                                  </p>
+                                  <p className="text-xs sm:text-sm text-muted-foreground text-center whitespace-nowrap">
                                     {new Date(request.created_at).toLocaleString("fr-FR", {
-                                      dateStyle: "medium",
-                                      timeStyle: "short",
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
                                     })}
-                                  </span>
+                                  </p>
+                                  {request.description && (
+                                    <p className="text-xs sm:text-sm text-muted-foreground text-center line-clamp-2 max-w-[300px]">
+                                      {request.description}
+                                    </p>
+                                  )}
                                 </div>
-                              </div>
-                              {request.description && (
-                                <div className="mt-3 pt-3 border-t">
-                                  <p className="text-xs text-muted-foreground line-clamp-2 min-w-0">{request.description}</p>
+
+                                {/* Section 3 */}
+                                <div className="flex flex-col gap-2 sm:gap-3 flex-shrink-0 w-full sm:w-auto items-center sm:items-center">
+                                  <div className="mt-2 flex justify-end">
+                                    <RequestDetailsModal request={request} />
+                                  </div>
                                 </div>
-                              )}
-                              <div className="mt-3">
-                                <RequestDetailsModal request={request} />
                               </div>
                             </CardContent>
                           </Card>
