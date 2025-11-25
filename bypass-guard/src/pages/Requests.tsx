@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
+import { Skeleton } from '@/components/ui/skeleton'
 import { 
   Search, 
   Filter, 
@@ -80,10 +82,30 @@ export default function Requests() {
   const [requestDemand, setRequestDemandList] = useState([]);
   const [requestApprobation, setRequestApprobationList] = useState([]);
   const [requestActifs, setRequestActifList] = useState([]);
+  const [isLoadingAll, setIsLoadingAll] = useState(false);
+  const [isLoadingMine, setIsLoadingMine] = useState(true);
+  const [isLoadingPending, setIsLoadingPending] = useState(false);
+  const [isLoadingActive, setIsLoadingActive] = useState(false);
   const { users, loading, error, user } = useSelector((state: RootState) => state.user);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const [activeTab, setActiveTab] = useState(user.role !== 'user' ? "mine" : "mine");
+  
+  // Fonction pour obtenir l'état de chargement selon l'onglet actif
+  const isLoading = () => {
+    switch (activeTab) {
+      case "all":
+        return isLoadingAll;
+      case "mine":
+        return isLoadingMine;
+      case "pending":
+        return isLoadingPending;
+      case "active":
+        return isLoadingActive;
+      default:
+        return isLoadingMine;
+    }
+  }
   // Déterminer quelle vue afficher selon l'URL
   const isNewRequest = location.pathname === '/requests/new'
 
@@ -160,54 +182,65 @@ export default function Requests() {
 
   useEffect(() => {
     
-
     if(user.role === 'administrator'){
         // Pour l'administrateur, récupérer toutes les demandes du système
+        setIsLoadingAll(true);
         api.get('/requests')
         .then(response => {
           // Handle successful response
           // L'API retourne une pagination : {data: [...], ...}
-          setRequestList(response.data.data || response.data)    
+          setRequestList(response.data.data || response.data);
+          setIsLoadingAll(false);
         })
         .catch(error => {
           // Handle error
           console.error('Error fetching data:', error);
+          setIsLoadingAll(false);
         });
     }
 
     if(user.role === 'administrator' || user.role === 'supervisor'){
+        setIsLoadingPending(true);
         api.get('/requests/pending')
         .then(response => {
           // Handle successful response
           // console.log(response.data); // The fetched data is typically in response.data
-          setRequestApprobationList(response.data.data)    
+          setRequestApprobationList(response.data.data);
+          setIsLoadingPending(false);
         })
         .catch(error => {
           // Handle error
           console.error('Error fetching data:', error);
+          setIsLoadingPending(false);
         });
 
+        setIsLoadingActive(true);
         api.get('/requests/active')
         .then(response => {
           // Handle successful response
           // console.log(response.data); // The fetched data is typically in response.data
-          setRequestActifList(response.data.data)    
+          setRequestActifList(response.data.data);
+          setIsLoadingActive(false);
         })
         .catch(error => {
           // Handle error
           console.error('Error fetching data:', error);
+          setIsLoadingActive(false);
         });
     }
     
+    setIsLoadingMine(true);
     api.get('/requests/mine')
     .then(response => {
       // Handle successful response
       // console.log(response.data); // The fetched data is typically in response.data
-      setRequestDemandList(response.data.data)    
+      setRequestDemandList(response.data.data);
+      setIsLoadingMine(false);
     })
     .catch(error => {
       // Handle error
       console.error('Error fetching data:', error);
+      setIsLoadingMine(false);
     });
     
     
@@ -265,21 +298,21 @@ export default function Requests() {
     return (
       <div className="flex-1 space-y-3 sm:space-y-4 md:space-y-6 p-3 sm:p-4 md:p-6">
         {/* Header avec navigation retour */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-          <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
-            <Link to="/requests">
-              <ArrowLeft className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Retour aux demandes</span>
-              <span className="sm:hidden">Retour</span>
-            </Link>
-          </Button>
-          <div className="text-left w-full sm:w-auto">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
-              Nouvelle demande de bypass
-            </h1>
-            <p className="text-xs sm:text-sm md:text-base text-muted-foreground mt-1">
-              Créer une nouvelle demande de bypass de capteur
-            </p>
+        <div className="w-full max-w-4xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="text-left w-full sm:w-auto">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
+                Nouvelle demande de bypass
+              </h1>
+              <p className="text-xs sm:text-sm md:text-base text-muted-foreground mt-1">
+                Créer une nouvelle demande de bypass de capteur
+              </p>
+            </div>
+            <Button variant="outline" size="icon" asChild className="flex-shrink-0 rounded-full w-12 h-12">
+              <Link to="/requests">
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+            </Button>
           </div>
         </div>
 
@@ -292,40 +325,61 @@ export default function Requests() {
   // Sinon, afficher la liste des demandes
   return (
     <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 min-w-0 box-border">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words">Gestion des demandes</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground break-words">
-            Suivi et gestion des demandes de bypass
-          </p>
-        </div>
-        <Button asChild className="w-full sm:w-auto text-sm">
-          <Link to="/requests/new">
-            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
-            <span className="hidden sm:inline">Nouvelle demande</span>
-            <span className="sm:hidden">Nouvelle</span>
-          </Link>
-        </Button>
-      </div>
+      {/* Header avec breadcrumb */}
+      <Card className="bg-card rounded-lg border">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              {/* Icône */}
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              {/* Titre, description et breadcrumb */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words mb-1">Gestion des demandes</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground break-words mb-2">Suivi et gestion des demandes de bypass</p>
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>
+                        <Link to="/">Tableau de bord</Link>
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>Demandes</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+            </div>
+            {/* Bouton retour */}
+            <Button variant="outline" size="icon" className="flex-shrink-0 rounded-full w-10 h-10" asChild>
+              <Link to="/">
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Onglets de navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full min-w-0">
-        <TabsList className="flex flex-col w-full h-auto gap-2">
+        <TabsList className="flex flex-row w-full h-auto gap-2 flex-wrap justify-between">
           {(user.role === "administrator") && (
-            <TabsTrigger value="all" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 w-full justify-start">
+            <TabsTrigger value="all" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 truncate flex-1 min-w-0">
               Toutes les demandes
             </TabsTrigger>
           )}
-          <TabsTrigger value="mine" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 w-full justify-start">
+          <TabsTrigger value="mine" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 truncate flex-1 min-w-0">
             Mes demandes
           </TabsTrigger>
           {(user.role === "administrator" || user.role === "supervisor") && (
             <>
-              <TabsTrigger value="pending" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 w-full justify-start">
-                En attente d'approbation
+              <TabsTrigger value="pending" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 truncate flex-1 min-w-0">
+                <span className="truncate">En attente</span>
               </TabsTrigger>
-              <TabsTrigger value="active" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 w-full justify-start">
+              <TabsTrigger value="active" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 truncate flex-1 min-w-0">
                 Bypass actifs
               </TabsTrigger>
             </>
@@ -337,25 +391,25 @@ export default function Requests() {
           <TabsContent value="all" className="space-y-4 sm:space-y-6">
             {/* Filters */}
             <Card className="w-full box-border">
-              <CardHeader className="p-3 sm:p-4">
+              {/* <CardHeader className="p-3 sm:p-4">
                 <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                   <Filter className="w-4 h-4 sm:w-4 sm:h-4" />
                   Filtres
                 </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
-                <div className="grid gap-3 sm:gap-3 md:gap-4 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
+              </CardHeader> */}
+              <CardContent className="p-4 sm:p-6 w-full min-w-0">
+                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
                   <div className="relative sm:col-span-2 lg:col-span-1 w-full min-w-0">
-                    <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                    <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                     <Input
                       placeholder="Rechercher..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8 sm:pl-10 text-sm w-full"
+                      className="pl-8 sm:pl-10 w-full text-sm"
                     />
                   </div>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
+                    <SelectTrigger className="text-sm w-full min-w-0">
                       <SelectValue placeholder="Statut" />
                     </SelectTrigger>
                     <SelectContent>
@@ -367,7 +421,7 @@ export default function Requests() {
                     </SelectContent>
                   </Select>
                   <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                    <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
+                    <SelectTrigger className="text-sm w-full min-w-0">
                       <SelectValue placeholder="Priorité" />
                     </SelectTrigger>
                     <SelectContent>
@@ -381,9 +435,9 @@ export default function Requests() {
                     setSearchTerm("")
                     setStatusFilter("all")
                     setPriorityFilter("all")
-                  }} className="text-sm h-9 sm:h-10 w-full sm:w-auto">
-                    <span className="hidden sm:inline">Réinitialiser filtres</span>
-                    <span className="sm:hidden">Réinitialiser</span>
+                  }} className="text-sm w-full sm:w-auto min-w-0 truncate">
+                    <span className="hidden sm:inline truncate">Réinitialiser filtres</span>
+                    <span className="sm:hidden truncate">Réinitialiser</span>
                   </Button>
                 </div>
               </CardContent>
@@ -412,72 +466,207 @@ export default function Requests() {
                     </Select>
                   </div>
                 </div>
-                <div className="text-xs text-muted-foreground text-center sm:text-right">
+                <div className="text-xs text-muted-foreground text-left">
                   Affichage de {startIndex + 1} à {Math.min(endIndex, filteredRequests.length)} sur {filteredRequests.length} demande{filteredRequests.length > 1 ? 's' : ''}
                 </div>
               </div>
             )}
 
-            {/* Requests list */}
-            <Card className="w-full box-border">
-              <CardHeader className="p-3 sm:p-4">
-                <CardTitle className="text-sm sm:text-base">Demandes ({filteredRequests.length})</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Liste des demandes de bypass
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
-                <div className="space-y-3 sm:space-y-3 md:space-y-4 w-full min-w-0">
-                  {activeTab === "all" && paginatedList.length === 0 ? (
-                    <div className="text-center py-6 sm:py-8">
-                      <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-sm sm:text-base text-muted-foreground">Aucune demande trouvée.</p>
-                    </div>
-                  ) : (
-                    activeTab === "all" && paginatedList.map((request) => (
-                      <div 
-                        key={request.id} 
-                        className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors min-w-0"
-                      >
-                        <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                          <div className="flex items-center justify-center w-8 h-8 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex-shrink-0">
-                            {getStatusIcon(request.status)}
-                          </div>
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-medium text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</span>
-                              <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs"}>
-                                {request.priority}
-                              </Badge>
-                              <Badge className={getStatusColor(request.status) + " text-xs"}>
-                                {request.status}
-                              </Badge>
+            {/* Requests list - Grille mobile/tablette / Liste desktop */}
+            {isLoading() ? (
+              <>
+                {/* Skeleton Loading - Vue grille mobile/tablette */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3 sm:gap-3 md:gap-4 w-full min-w-0">
+                  {Array.from({ length: itemsPerPage }).map((_, index) => (
+                    <Card key={index} className="flex flex-col h-full w-full min-w-0 box-border">
+                      <CardHeader className="pb-4 p-6 min-w-0">
+                        <div className="flex items-start justify-between gap-1.5 min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <Skeleton className="w-6 h-6 rounded-full" />
+                            <div className="min-w-0 flex-1">
+                              <Skeleton className="h-5 w-32 mb-2" />
+                              <Skeleton className="h-4 w-24" />
                             </div>
-                            <p className="text-xs sm:text-xs text-muted-foreground truncate">{request.equipment.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{request.sensor.name}</p>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-3 md:gap-4 sm:flex-col sm:items-end sm:text-right min-w-0">
-                          <div className="space-y-1 min-w-0 flex-1 sm:flex-none">
-                            <p className="text-xs sm:text-sm font-medium truncate">{request.requester.full_name}</p>
-                            <p className="text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                          <Skeleton className="h-5 w-16" />
+                          <Skeleton className="h-5 w-20" />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-1.5 p-6 pt-0 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <Skeleton className="h-3 w-20" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Skeleton className="h-3 w-12" />
+                          <Skeleton className="h-3 w-28" />
+                        </div>
+                        <Skeleton className="h-3 w-full mt-2" />
+                        <Skeleton className="h-8 w-24 mt-2" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                
+                {/* Skeleton Loading - Vue liste desktop */}
+                <div className="hidden lg:block space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
+                  {Array.from({ length: itemsPerPage }).map((_, index) => (
+                    <Card key={index} className="w-full min-w-0 box-border">
+                      <CardHeader className="p-3 sm:p-4">
+                        <div className="flex items-start justify-between gap-3 min-w-0">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <Skeleton className="w-8 h-8 rounded-full" />
+                            <div className="min-w-0 flex-1">
+                              <Skeleton className="h-4 w-32 mb-2" />
+                              <Skeleton className="h-3 w-48" />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Skeleton className="h-5 w-16" />
+                            <Skeleton className="h-5 w-20" />
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
+                        <div className="flex items-center justify-between gap-3 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Skeleton className="h-3 w-20" />
+                            <Skeleton className="h-3 w-32" />
+                          </div>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Skeleton className="h-3 w-12" />
+                            <Skeleton className="h-3 w-36" />
+                          </div>
+                        </div>
+                        <Skeleton className="h-3 w-full mt-3 pt-3" />
+                        <Skeleton className="h-8 w-28 mt-3" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            ) : activeTab === "all" && paginatedList.length === 0 ? (
+              <Card className="w-full box-border">
+                <CardContent className="text-center py-6 sm:py-8">
+                  <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-sm sm:text-base text-muted-foreground">Aucune demande trouvée.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Vue grille pour mobile/tablette - cachée sur desktop */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3 sm:gap-3 md:gap-4 w-full min-w-0">
+                  {activeTab === "all" && paginatedList.map((request) => (
+                    <Card key={request.id} className="hover:shadow-lg transition-shadow flex flex-col h-full w-full min-w-0 box-border">
+                      <CardHeader className="pb-4 p-6 min-w-0">
+                        <div className="flex items-start justify-between gap-1.5 min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 flex-shrink-0">
+                              {getStatusIcon(request.status)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <CardTitle className="text-lg truncate min-w-0">{request.request_code}</CardTitle>
+                              <CardDescription className="text-xs line-clamp-2 mt-1.5 min-w-0">
+                                {request.equipment?.name || 'N/A'} - {request.sensor?.name || 'N/A'}
+                              </CardDescription>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                          <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                            {request.priority}
+                          </Badge>
+                          <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                            {request.status}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-1.5 p-6 pt-0 min-w-0">
+                        <div className="flex items-center justify-between min-w-0">
+                          <span className="text-xs text-muted-foreground truncate">Demandeur:</span>
+                          <span className="text-xs truncate">{request.requester?.full_name || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center justify-between min-w-0">
+                          <span className="text-xs text-muted-foreground truncate">Date:</span>
+                          <span className="text-xs truncate whitespace-nowrap">
                             {new Date(request.created_at).toLocaleString("fr-FR", {
-                              dateStyle: "medium",
+                              dateStyle: "short",
                               timeStyle: "short",
                             })}
-                            </p>
-                            <p className="text-xs text-muted-foreground line-clamp-2 sm:line-clamp-none">{request.description}</p>
+                          </span>
+                        </div>
+                        {request.description && (
+                          <div className="pt-1">
+                            <p className="text-xs text-muted-foreground line-clamp-2 min-w-0">{request.description}</p>
                           </div>
-                          <div className="flex-shrink-0">
-                            <RequestDetailsModal request={request} />
+                        )}
+                        <div className="pt-2">
+                          <RequestDetailsModal request={request} />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                
+                {/* Vue liste pour desktop - cachée sur mobile/tablette */}
+                <div className="hidden lg:block space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
+                  {activeTab === "all" && paginatedList.map((request) => (
+                    <Card key={request.id} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
+                      <CardHeader className="p-3 sm:p-4">
+                        <div className="flex items-start justify-between gap-3 min-w-0">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 flex-shrink-0">
+                              {getStatusIcon(request.status)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <CardTitle className="text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</CardTitle>
+                              <CardDescription className="text-xs sm:text-xs mt-1 min-w-0">
+                                {request.equipment?.name || 'N/A'} - {request.sensor?.name || 'N/A'}
+                              </CardDescription>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap"}>
+                              {request.priority}
+                            </Badge>
+                            <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap"}>
+                              {request.status}
+                            </Badge>
                           </div>
                         </div>
-                      </div>
-                    ))
-                  )}
+                      </CardHeader>
+                      <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
+                        <div className="flex items-center justify-between gap-3 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">Demandeur:</span>
+                            <span className="text-xs sm:text-sm truncate">{request.requester?.full_name || 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">Date:</span>
+                            <span className="text-xs sm:text-sm truncate whitespace-nowrap">
+                              {new Date(request.created_at).toLocaleString("fr-FR", {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                        {request.description && (
+                          <div className="mt-3 pt-3 border-t">
+                            <p className="text-xs text-muted-foreground line-clamp-2 min-w-0">{request.description}</p>
+                          </div>
+                        )}
+                        <div className="mt-3">
+                          <RequestDetailsModal request={request} />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
+              </>
+            )}
 
             {/* Pagination */}
             {filteredRequests.length > 0 && totalPages > 1 && (
@@ -626,72 +815,207 @@ export default function Requests() {
                         </Select>
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground text-center sm:text-right">
+                    <div className="text-xs text-muted-foreground text-left">
                       Affichage de {startIndex + 1} à {Math.min(endIndex, filteredDemand.length)} sur {filteredDemand.length} demande{filteredDemand.length > 1 ? 's' : ''}
                     </div>
                   </div>
                 )}
 
-                {/* Requests list */}
-                <Card className="w-full box-border">
-                  <CardHeader className="p-3 sm:p-4">
-                    <CardTitle className="text-sm sm:text-base">Demandes ({filteredDemand.length})</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      Liste des demandes de bypass
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
-                    <div className="space-y-3 sm:space-y-3 md:space-y-4 w-full min-w-0">
-                      {activeTab === "mine" && paginatedList.length === 0 ? (
-                        <div className="text-center py-6 sm:py-8">
-                          <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
-                          <p className="text-sm sm:text-base text-muted-foreground">Aucune demande trouvée.</p>
-                        </div>
-                      ) : (
-                        activeTab === "mine" && paginatedList.map((request) => (
-                          <div 
-                            key={request.id} 
-                            className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors min-w-0"
-                          >
-                            <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                              <div className="flex items-center justify-center w-8 h-8 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex-shrink-0">
-                                {getStatusIcon(request.status)}
-                              </div>
-                              <div className="space-y-1 min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="font-medium text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</span>
-                                  <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs"}>
-                                    {request.priority}
-                                  </Badge>
-                                  <Badge className={getStatusColor(request.status) + " text-xs"}>
-                                    {request.status}
-                                  </Badge>
+                {/* Requests list - Grille mobile/tablette / Liste desktop */}
+                {isLoading() ? (
+                  <>
+                    {/* Skeleton Loading - Vue grille mobile/tablette */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3 sm:gap-3 md:gap-4 w-full min-w-0">
+                      {Array.from({ length: itemsPerPage }).map((_, index) => (
+                        <Card key={index} className="flex flex-col h-full w-full min-w-0 box-border">
+                          <CardHeader className="pb-4 p-6 min-w-0">
+                            <div className="flex items-start justify-between gap-1.5 min-w-0">
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <Skeleton className="w-6 h-6 rounded-full" />
+                                <div className="min-w-0 flex-1">
+                                  <Skeleton className="h-5 w-32 mb-2" />
+                                  <Skeleton className="h-4 w-24" />
                                 </div>
-                                <p className="text-xs sm:text-xs text-muted-foreground truncate">{request.equipment.name}</p>
-                                <p className="text-xs text-muted-foreground truncate">{request.sensor.name}</p>
                               </div>
                             </div>
-                            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-3 md:gap-4 sm:flex-col sm:items-end sm:text-right min-w-0">
-                              <div className="space-y-1 min-w-0 flex-1 sm:flex-none">
-                                <p className="text-xs sm:text-sm font-medium truncate">{request.requester ? request.requester.full_name : 'Moi'}</p>
-                                <p className="text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                              <Skeleton className="h-5 w-16" />
+                              <Skeleton className="h-5 w-20" />
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-1.5 p-6 pt-0 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <Skeleton className="h-3 w-20" />
+                              <Skeleton className="h-3 w-24" />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Skeleton className="h-3 w-12" />
+                              <Skeleton className="h-3 w-28" />
+                            </div>
+                            <Skeleton className="h-3 w-full mt-2" />
+                            <Skeleton className="h-8 w-24 mt-2" />
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    
+                    {/* Skeleton Loading - Vue liste desktop */}
+                    <div className="hidden lg:block space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
+                      {Array.from({ length: itemsPerPage }).map((_, index) => (
+                        <Card key={index} className="w-full min-w-0 box-border">
+                          <CardHeader className="p-3 sm:p-4">
+                            <div className="flex items-start justify-between gap-3 min-w-0">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <Skeleton className="w-8 h-8 rounded-full" />
+                                <div className="min-w-0 flex-1">
+                                  <Skeleton className="h-4 w-32 mb-2" />
+                                  <Skeleton className="h-3 w-48" />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <Skeleton className="h-5 w-16" />
+                                <Skeleton className="h-5 w-20" />
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
+                            <div className="flex items-center justify-between gap-3 min-w-0">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <Skeleton className="h-3 w-20" />
+                                <Skeleton className="h-3 w-32" />
+                              </div>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Skeleton className="h-3 w-12" />
+                                <Skeleton className="h-3 w-36" />
+                              </div>
+                            </div>
+                            <Skeleton className="h-3 w-full mt-3 pt-3" />
+                            <Skeleton className="h-8 w-28 mt-3" />
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                ) : activeTab === "mine" && paginatedList.length === 0 ? (
+                  <Card className="w-full box-border">
+                    <CardContent className="text-center py-6 sm:py-8">
+                      <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-sm sm:text-base text-muted-foreground">Aucune demande trouvée.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <>
+                    {/* Vue grille pour mobile/tablette - cachée sur desktop */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3 sm:gap-3 md:gap-4 w-full min-w-0">
+                      {activeTab === "mine" && paginatedList.map((request) => (
+                        <Card key={request.id} className="hover:shadow-lg transition-shadow flex flex-col h-full w-full min-w-0 box-border">
+                          <CardHeader className="pb-4 p-6 min-w-0">
+                            <div className="flex items-start justify-between gap-1.5 min-w-0">
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 flex-shrink-0">
+                                  {getStatusIcon(request.status)}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <CardTitle className="text-lg truncate min-w-0">{request.request_code}</CardTitle>
+                                  <CardDescription className="text-xs line-clamp-2 mt-1.5 min-w-0">
+                                    {request.equipment?.name || 'N/A'} - {request.sensor?.name || 'N/A'}
+                                  </CardDescription>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                              <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                {request.priority}
+                              </Badge>
+                              <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                {request.status}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-1.5 p-6 pt-0 min-w-0">
+                            <div className="flex items-center justify-between min-w-0">
+                              <span className="text-xs text-muted-foreground truncate">Demandeur:</span>
+                              <span className="text-xs truncate">{request.requester ? request.requester.full_name : 'Moi'}</span>
+                            </div>
+                            <div className="flex items-center justify-between min-w-0">
+                              <span className="text-xs text-muted-foreground truncate">Date:</span>
+                              <span className="text-xs truncate whitespace-nowrap">
                                 {new Date(request.created_at).toLocaleString("fr-FR", {
-                                  dateStyle: "medium",
+                                  dateStyle: "short",
                                   timeStyle: "short",
                                 })}
-                                </p>
-                                <p className="text-xs text-muted-foreground line-clamp-2 sm:line-clamp-none">{request.description}</p>
+                              </span>
+                            </div>
+                            {request.description && (
+                              <div className="pt-1">
+                                <p className="text-xs text-muted-foreground line-clamp-2 min-w-0">{request.description}</p>
                               </div>
-                              <div className="flex-shrink-0">
-                                <RequestDetailsModal request={request} />
+                            )}
+                            <div className="pt-2">
+                              <RequestDetailsModal request={request} />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    
+                    {/* Vue liste pour desktop - cachée sur mobile/tablette */}
+                    <div className="hidden lg:block space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
+                      {activeTab === "mine" && paginatedList.map((request) => (
+                        <Card key={request.id} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
+                          <CardHeader className="p-3 sm:p-4">
+                            <div className="flex items-start justify-between gap-3 min-w-0">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 flex-shrink-0">
+                                  {getStatusIcon(request.status)}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <CardTitle className="text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</CardTitle>
+                                  <CardDescription className="text-xs sm:text-xs mt-1 min-w-0">
+                                    {request.equipment?.name || 'N/A'} - {request.sensor?.name || 'N/A'}
+                                  </CardDescription>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap"}>
+                                  {request.priority}
+                                </Badge>
+                                <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap"}>
+                                  {request.status}
+                                </Badge>
                               </div>
                             </div>
-                          </div>
-                        ))
-                      )}
+                          </CardHeader>
+                          <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
+                            <div className="flex items-center justify-between gap-3 min-w-0">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">Demandeur:</span>
+                                <span className="text-xs sm:text-sm truncate">{request.requester ? request.requester.full_name : 'Moi'}</span>
+                              </div>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">Date:</span>
+                                <span className="text-xs sm:text-sm truncate whitespace-nowrap">
+                                  {new Date(request.created_at).toLocaleString("fr-FR", {
+                                    dateStyle: "medium",
+                                    timeStyle: "short",
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+                            {request.description && (
+                              <div className="mt-3 pt-3 border-t">
+                                <p className="text-xs text-muted-foreground line-clamp-2 min-w-0">{request.description}</p>
+                              </div>
+                            )}
+                            <div className="mt-3">
+                              <RequestDetailsModal request={request} />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
+                  </>
+                )}
 
                 {/* Pagination */}
                 {filteredDemand.length > 0 && totalPages > 1 && (
@@ -840,72 +1164,207 @@ export default function Requests() {
                           </Select>
                         </div>
                       </div>
-                      <div className="text-xs text-muted-foreground text-center sm:text-right">
+                      <div className="text-xs text-muted-foreground text-left">
                         Affichage de {startIndex + 1} à {Math.min(endIndex, filteredApprobation.length)} sur {filteredApprobation.length} demande{filteredApprobation.length > 1 ? 's' : ''}
                       </div>
                     </div>
                   )}
 
-                  {/* Requests list */}
-                  <Card className="w-full box-border">
-                    <CardHeader className="p-3 sm:p-4">
-                      <CardTitle className="text-sm sm:text-base">Demandes ({filteredApprobation.length})</CardTitle>
-                      <CardDescription className="text-xs sm:text-sm">
-                        Liste des demandes de bypass
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
-                      <div className="space-y-3 sm:space-y-3 md:space-y-4 w-full min-w-0">
-                        {activeTab === "pending" && paginatedList.length === 0 ? (
-                          <div className="text-center py-6 sm:py-8">
-                            <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
-                            <p className="text-sm sm:text-base text-muted-foreground">Aucune demande trouvée.</p>
-                          </div>
-                        ) : (
-                          activeTab === "pending" && paginatedList.map((request) => (
-                            <div 
-                              key={request.id} 
-                              className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors min-w-0"
-                            >
-                              <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                                <div className="flex items-center justify-center w-8 h-8 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex-shrink-0">
-                                  {getStatusIcon(request.status)}
-                                </div>
-                                <div className="space-y-1 min-w-0 flex-1">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="font-medium text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</span>
-                                    <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs"}>
-                                      {request.priority}
-                                    </Badge>
-                                    <Badge className={getStatusColor(request.status) + " text-xs"}>
-                                      {request.status}
-                                    </Badge>
+                  {/* Requests list - Grille mobile/tablette / Liste desktop */}
+                  {isLoading() ? (
+                    <>
+                      {/* Skeleton Loading - Vue grille mobile/tablette */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3 sm:gap-3 md:gap-4 w-full min-w-0">
+                        {Array.from({ length: itemsPerPage }).map((_, index) => (
+                          <Card key={index} className="flex flex-col h-full w-full min-w-0 box-border">
+                            <CardHeader className="pb-4 p-6 min-w-0">
+                              <div className="flex items-start justify-between gap-1.5 min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                  <Skeleton className="w-6 h-6 rounded-full" />
+                                  <div className="min-w-0 flex-1">
+                                    <Skeleton className="h-5 w-32 mb-2" />
+                                    <Skeleton className="h-4 w-24" />
                                   </div>
-                                  <p className="text-xs sm:text-xs text-muted-foreground truncate">{request.equipment.name}</p>
-                                  <p className="text-xs text-muted-foreground truncate">{request.sensor.name}</p>
                                 </div>
                               </div>
-                              <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-3 md:gap-4 sm:flex-col sm:items-end sm:text-right min-w-0">
-                                <div className="space-y-1 min-w-0 flex-1 sm:flex-none">
-                                  <p className="text-xs sm:text-sm font-medium truncate">{request.requester.full_name}</p>
-                                  <p className="text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                                <Skeleton className="h-5 w-16" />
+                                <Skeleton className="h-5 w-20" />
+                              </div>
+                            </CardHeader>
+                            <CardContent className="space-y-1.5 p-6 pt-0 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <Skeleton className="h-3 w-20" />
+                                <Skeleton className="h-3 w-24" />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <Skeleton className="h-3 w-12" />
+                                <Skeleton className="h-3 w-28" />
+                              </div>
+                              <Skeleton className="h-3 w-full mt-2" />
+                              <Skeleton className="h-8 w-24 mt-2" />
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                      
+                      {/* Skeleton Loading - Vue liste desktop */}
+                      <div className="hidden lg:block space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
+                        {Array.from({ length: itemsPerPage }).map((_, index) => (
+                          <Card key={index} className="w-full min-w-0 box-border">
+                            <CardHeader className="p-3 sm:p-4">
+                              <div className="flex items-start justify-between gap-3 min-w-0">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <Skeleton className="w-8 h-8 rounded-full" />
+                                  <div className="min-w-0 flex-1">
+                                    <Skeleton className="h-4 w-32 mb-2" />
+                                    <Skeleton className="h-3 w-48" />
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <Skeleton className="h-5 w-16" />
+                                  <Skeleton className="h-5 w-20" />
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
+                              <div className="flex items-center justify-between gap-3 min-w-0">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <Skeleton className="h-3 w-20" />
+                                  <Skeleton className="h-3 w-32" />
+                                </div>
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Skeleton className="h-3 w-12" />
+                                  <Skeleton className="h-3 w-36" />
+                                </div>
+                              </div>
+                              <Skeleton className="h-3 w-full mt-3 pt-3" />
+                              <Skeleton className="h-8 w-28 mt-3" />
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </>
+                  ) : activeTab === "pending" && paginatedList.length === 0 ? (
+                    <Card className="w-full box-border">
+                      <CardContent className="text-center py-6 sm:py-8">
+                        <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-sm sm:text-base text-muted-foreground">Aucune demande trouvée.</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <>
+                      {/* Vue grille pour mobile/tablette - cachée sur desktop */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3 sm:gap-3 md:gap-4 w-full min-w-0">
+                        {activeTab === "pending" && paginatedList.map((request) => (
+                          <Card key={request.id} className="hover:shadow-lg transition-shadow flex flex-col h-full w-full min-w-0 box-border">
+                            <CardHeader className="pb-4 p-6 min-w-0">
+                              <div className="flex items-start justify-between gap-1.5 min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 flex-shrink-0">
+                                    {getStatusIcon(request.status)}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <CardTitle className="text-lg truncate min-w-0">{request.request_code}</CardTitle>
+                                    <CardDescription className="text-xs line-clamp-2 mt-1.5 min-w-0">
+                                      {request.equipment?.name || 'N/A'} - {request.sensor?.name || 'N/A'}
+                                    </CardDescription>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                                <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                  {request.priority}
+                                </Badge>
+                                <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                  {request.status}
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="space-y-1.5 p-6 pt-0 min-w-0">
+                              <div className="flex items-center justify-between min-w-0">
+                                <span className="text-xs text-muted-foreground truncate">Demandeur:</span>
+                                <span className="text-xs truncate">{request.requester?.full_name || 'N/A'}</span>
+                              </div>
+                              <div className="flex items-center justify-between min-w-0">
+                                <span className="text-xs text-muted-foreground truncate">Date:</span>
+                                <span className="text-xs truncate whitespace-nowrap">
                                   {new Date(request.created_at).toLocaleString("fr-FR", {
-                                    dateStyle: "medium",
+                                    dateStyle: "short",
                                     timeStyle: "short",
                                   })}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground line-clamp-2 sm:line-clamp-none">{request.description}</p>
+                                </span>
+                              </div>
+                              {request.description && (
+                                <div className="pt-1">
+                                  <p className="text-xs text-muted-foreground line-clamp-2 min-w-0">{request.description}</p>
                                 </div>
-                                <div className="flex-shrink-0">
-                                  <RequestDetailsModal request={request} />
+                              )}
+                              <div className="pt-2">
+                                <RequestDetailsModal request={request} />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                      
+                      {/* Vue liste pour desktop - cachée sur mobile/tablette */}
+                      <div className="hidden lg:block space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
+                        {activeTab === "pending" && paginatedList.map((request) => (
+                          <Card key={request.id} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
+                            <CardHeader className="p-3 sm:p-4">
+                              <div className="flex items-start justify-between gap-3 min-w-0">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 flex-shrink-0">
+                                    {getStatusIcon(request.status)}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <CardTitle className="text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</CardTitle>
+                                    <CardDescription className="text-xs sm:text-xs mt-1 min-w-0">
+                                      {request.equipment?.name || 'N/A'} - {request.sensor?.name || 'N/A'}
+                                    </CardDescription>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap"}>
+                                    {request.priority}
+                                  </Badge>
+                                  <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap"}>
+                                    {request.status}
+                                  </Badge>
                                 </div>
                               </div>
-                            </div>
-                          ))
-                        )}
+                            </CardHeader>
+                            <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
+                              <div className="flex items-center justify-between gap-3 min-w-0">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap">Demandeur:</span>
+                                  <span className="text-xs sm:text-sm truncate">{request.requester?.full_name || 'N/A'}</span>
+                                </div>
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap">Date:</span>
+                                  <span className="text-xs sm:text-sm truncate whitespace-nowrap">
+                                    {new Date(request.created_at).toLocaleString("fr-FR", {
+                                      dateStyle: "medium",
+                                      timeStyle: "short",
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                              {request.description && (
+                                <div className="mt-3 pt-3 border-t">
+                                  <p className="text-xs text-muted-foreground line-clamp-2 min-w-0">{request.description}</p>
+                                </div>
+                              )}
+                              <div className="mt-3">
+                                <RequestDetailsModal request={request} />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </>
+                  )}
 
                   {/* Pagination */}
                   {filteredApprobation.length > 0 && totalPages > 1 && (
@@ -982,19 +1441,19 @@ export default function Requests() {
                         Filtres
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
-                      <div className="grid gap-3 sm:gap-3 md:gap-4 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
+                    <CardContent className="p-4 sm:p-6 w-full min-w-0">
+                      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
                       <div className="relative sm:col-span-2 lg:col-span-1 w-full min-w-0">
-                        <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                        <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                         <Input
                           placeholder="Rechercher..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-8 sm:pl-10 text-sm w-full"
+                          className="pl-8 sm:pl-10 w-full text-sm"
                         />
                       </div>
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
+                        <SelectTrigger className="text-sm w-full min-w-0">
                           <SelectValue placeholder="Statut" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1006,7 +1465,7 @@ export default function Requests() {
                         </SelectContent>
                       </Select>
                       <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                        <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
+                        <SelectTrigger className="text-sm w-full min-w-0">
                           <SelectValue placeholder="Priorité" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1020,9 +1479,9 @@ export default function Requests() {
                         setSearchTerm("")
                         setStatusFilter("all")
                         setPriorityFilter("all")
-                      }} className="text-sm h-9 sm:h-10 w-full sm:w-auto">
-                        <span className="hidden sm:inline">Réinitialiser filtres</span>
-                        <span className="sm:hidden">Réinitialiser</span>
+                      }} className="text-sm w-full sm:w-auto min-w-0 truncate">
+                        <span className="hidden sm:inline truncate">Réinitialiser filtres</span>
+                        <span className="sm:hidden truncate">Réinitialiser</span>
                       </Button>
                       </div>
                     </CardContent>
@@ -1051,72 +1510,207 @@ export default function Requests() {
                           </Select>
                         </div>
                       </div>
-                      <div className="text-xs text-muted-foreground text-center sm:text-right">
+                      <div className="text-xs text-muted-foreground text-left">
                         Affichage de {startIndex + 1} à {Math.min(endIndex, filteredActifs.length)} sur {filteredActifs.length} demande{filteredActifs.length > 1 ? 's' : ''}
                       </div>
                     </div>
                   )}
 
-                  {/* Requests list */}
-                  <Card className="w-full box-border">
-                    <CardHeader className="p-3 sm:p-4">
-                      <CardTitle className="text-sm sm:text-base">Demandes ({filteredActifs.length})</CardTitle>
-                      <CardDescription className="text-xs sm:text-sm">
-                        Liste des demandes de bypass
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
-                      <div className="space-y-3 sm:space-y-3 md:space-y-4 w-full min-w-0">
-                        {activeTab === "active" && paginatedList.length === 0 ? (
-                          <div className="text-center py-6 sm:py-8">
-                            <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
-                            <p className="text-sm sm:text-base text-muted-foreground">Aucune demande trouvée.</p>
-                          </div>
-                        ) : (
-                          activeTab === "active" && paginatedList.map((request) => (
-                            <div 
-                              key={request.id} 
-                              className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors min-w-0"
-                            >
-                              <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                                <div className="flex items-center justify-center w-8 h-8 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex-shrink-0">
-                                  {getStatusIcon(request.status)}
-                                </div>
-                                <div className="space-y-1 min-w-0 flex-1">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="font-medium text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</span>
-                                    <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs"}>
-                                      {request.priority}
-                                    </Badge>
-                                    <Badge className={getStatusColor(request.status) + " text-xs"}>
-                                      {request.status}
-                                    </Badge>
+                  {/* Requests list - Grille mobile/tablette / Liste desktop */}
+                  {isLoading() ? (
+                    <>
+                      {/* Skeleton Loading - Vue grille mobile/tablette */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3 sm:gap-3 md:gap-4 w-full min-w-0">
+                        {Array.from({ length: itemsPerPage }).map((_, index) => (
+                          <Card key={index} className="flex flex-col h-full w-full min-w-0 box-border">
+                            <CardHeader className="pb-4 p-6 min-w-0">
+                              <div className="flex items-start justify-between gap-1.5 min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                  <Skeleton className="w-6 h-6 rounded-full" />
+                                  <div className="min-w-0 flex-1">
+                                    <Skeleton className="h-5 w-32 mb-2" />
+                                    <Skeleton className="h-4 w-24" />
                                   </div>
-                                  <p className="text-xs sm:text-xs text-muted-foreground truncate">{request.equipment.name}</p>
-                                  <p className="text-xs text-muted-foreground truncate">{request.sensor.name}</p>
                                 </div>
                               </div>
-                              <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-3 md:gap-4 sm:flex-col sm:items-end sm:text-right min-w-0">
-                                <div className="space-y-1 min-w-0 flex-1 sm:flex-none">
-                                  <p className="text-xs sm:text-sm font-medium truncate">{request.requester.full_name}</p>
-                                  <p className="text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                                <Skeleton className="h-5 w-16" />
+                                <Skeleton className="h-5 w-20" />
+                              </div>
+                            </CardHeader>
+                            <CardContent className="space-y-1.5 p-6 pt-0 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <Skeleton className="h-3 w-20" />
+                                <Skeleton className="h-3 w-24" />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <Skeleton className="h-3 w-12" />
+                                <Skeleton className="h-3 w-28" />
+                              </div>
+                              <Skeleton className="h-3 w-full mt-2" />
+                              <Skeleton className="h-8 w-24 mt-2" />
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                      
+                      {/* Skeleton Loading - Vue liste desktop */}
+                      <div className="hidden lg:block space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
+                        {Array.from({ length: itemsPerPage }).map((_, index) => (
+                          <Card key={index} className="w-full min-w-0 box-border">
+                            <CardHeader className="p-3 sm:p-4">
+                              <div className="flex items-start justify-between gap-3 min-w-0">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <Skeleton className="w-8 h-8 rounded-full" />
+                                  <div className="min-w-0 flex-1">
+                                    <Skeleton className="h-4 w-32 mb-2" />
+                                    <Skeleton className="h-3 w-48" />
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <Skeleton className="h-5 w-16" />
+                                  <Skeleton className="h-5 w-20" />
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
+                              <div className="flex items-center justify-between gap-3 min-w-0">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <Skeleton className="h-3 w-20" />
+                                  <Skeleton className="h-3 w-32" />
+                                </div>
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Skeleton className="h-3 w-12" />
+                                  <Skeleton className="h-3 w-36" />
+                                </div>
+                              </div>
+                              <Skeleton className="h-3 w-full mt-3 pt-3" />
+                              <Skeleton className="h-8 w-28 mt-3" />
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </>
+                  ) : activeTab === "active" && paginatedList.length === 0 ? (
+                    <Card className="w-full box-border">
+                      <CardContent className="text-center py-6 sm:py-8">
+                        <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-sm sm:text-base text-muted-foreground">Aucune demande trouvée.</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <>
+                      {/* Vue grille pour mobile/tablette - cachée sur desktop */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3 sm:gap-3 md:gap-4 w-full min-w-0">
+                        {activeTab === "active" && paginatedList.map((request) => (
+                          <Card key={request.id} className="hover:shadow-lg transition-shadow flex flex-col h-full w-full min-w-0 box-border">
+                            <CardHeader className="pb-4 p-6 min-w-0">
+                              <div className="flex items-start justify-between gap-1.5 min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 flex-shrink-0">
+                                    {getStatusIcon(request.status)}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <CardTitle className="text-lg truncate min-w-0">{request.request_code}</CardTitle>
+                                    <CardDescription className="text-xs line-clamp-2 mt-1.5 min-w-0">
+                                      {request.equipment?.name || 'N/A'} - {request.sensor?.name || 'N/A'}
+                                    </CardDescription>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                                <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                  {request.priority}
+                                </Badge>
+                                <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                                  {request.status}
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="space-y-1.5 p-6 pt-0 min-w-0">
+                              <div className="flex items-center justify-between min-w-0">
+                                <span className="text-xs text-muted-foreground truncate">Demandeur:</span>
+                                <span className="text-xs truncate">{request.requester?.full_name || 'N/A'}</span>
+                              </div>
+                              <div className="flex items-center justify-between min-w-0">
+                                <span className="text-xs text-muted-foreground truncate">Date:</span>
+                                <span className="text-xs truncate whitespace-nowrap">
                                   {new Date(request.created_at).toLocaleString("fr-FR", {
-                                    dateStyle: "medium",
+                                    dateStyle: "short",
                                     timeStyle: "short",
                                   })}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground line-clamp-2 sm:line-clamp-none">{request.description}</p>
+                                </span>
+                              </div>
+                              {request.description && (
+                                <div className="pt-1">
+                                  <p className="text-xs text-muted-foreground line-clamp-2 min-w-0">{request.description}</p>
                                 </div>
-                                <div className="flex-shrink-0">
-                                  <RequestDetailsModal request={request} />
+                              )}
+                              <div className="pt-2">
+                                <RequestDetailsModal request={request} />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                      
+                      {/* Vue liste pour desktop - cachée sur mobile/tablette */}
+                      <div className="hidden lg:block space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
+                        {activeTab === "active" && paginatedList.map((request) => (
+                          <Card key={request.id} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
+                            <CardHeader className="p-3 sm:p-4">
+                              <div className="flex items-start justify-between gap-3 min-w-0">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 flex-shrink-0">
+                                    {getStatusIcon(request.status)}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <CardTitle className="text-sm sm:text-sm lg:text-base truncate min-w-0">{request.request_code}</CardTitle>
+                                    <CardDescription className="text-xs sm:text-xs mt-1 min-w-0">
+                                      {request.equipment?.name || 'N/A'} - {request.sensor?.name || 'N/A'}
+                                    </CardDescription>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs whitespace-nowrap"}>
+                                    {request.priority}
+                                  </Badge>
+                                  <Badge className={getStatusColor(request.status) + " text-xs whitespace-nowrap"}>
+                                    {request.status}
+                                  </Badge>
                                 </div>
                               </div>
-                            </div>
-                          ))
-                        )}
+                            </CardHeader>
+                            <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
+                              <div className="flex items-center justify-between gap-3 min-w-0">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap">Demandeur:</span>
+                                  <span className="text-xs sm:text-sm truncate">{request.requester?.full_name || 'N/A'}</span>
+                                </div>
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap">Date:</span>
+                                  <span className="text-xs sm:text-sm truncate whitespace-nowrap">
+                                    {new Date(request.created_at).toLocaleString("fr-FR", {
+                                      dateStyle: "medium",
+                                      timeStyle: "short",
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                              {request.description && (
+                                <div className="mt-3 pt-3 border-t">
+                                  <p className="text-xs text-muted-foreground line-clamp-2 min-w-0">{request.description}</p>
+                                </div>
+                              )}
+                              <div className="mt-3">
+                                <RequestDetailsModal request={request} />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </>
+                  )}
 
                   {/* Pagination */}
                   {filteredActifs.length > 0 && totalPages > 1 && (

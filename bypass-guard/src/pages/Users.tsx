@@ -10,12 +10,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Plus, Pencil, Trash2, Search, User as UserIcon, LayoutGrid, Table as TableIcon } from 'lucide-react';
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Plus, Pencil, Trash2, Search, User as UserIcon, LayoutGrid, Table as TableIcon, ArrowLeft, Users as UsersIcon } from 'lucide-react';
 import { mockUsers } from '@/data/mockUsers';
 import { User, UserRole } from '@/types/user';
 import { toast } from 'sonner';
 import api from '../axios';
 import { LogIn, Eye, EyeOff } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -244,39 +246,103 @@ const Users: React.FC = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 min-w-0 box-border">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words">Gestion des Utilisateurs</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground break-words">Gérez les utilisateurs et leurs permissions</p>
-        </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-          setIsAddDialogOpen(open);
-          if (!open) {
-            setEditingUser(null);
-            setNewUser({
-              firstName: '',
-              lastName: '',
-              username: '',
-              email: '',
-              role: 'user',
-              department: '',
-              full_name: '',
-              password: '',
-              zone: '',
-              phone: '',
-              id: '',
-              employeeId: ''
-            });
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2 w-full sm:w-auto text-sm">
-              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Ajouter un utilisateur</span>
-              <span className="sm:hidden">Ajouter</span>
+      {/* Header avec breadcrumb */}
+      <Card className="bg-card rounded-lg border">
+        <CardContent className="p-3 sm:p-4 md:p-6">
+          <div className="flex items-center justify-between gap-2 sm:gap-4 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
+              {/* Icône */}
+              <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                <UsersIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              {/* Titre, description et breadcrumb */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground break-words mb-1 truncate">Gestion des Utilisateurs</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground break-words mb-2 line-clamp-1">Gérez les utilisateurs et leurs permissions</p>
+                <Breadcrumb>
+                  <BreadcrumbList className="flex-wrap">
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>
+                        <Link to="/" className="truncate">Tableau de bord</Link>
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage className="truncate">Utilisateurs</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+            </div>
+            {/* Bouton retour */}
+            <Button variant="outline" size="icon" className="flex-shrink-0 rounded-full w-9 h-9 sm:w-10 sm:h-10" asChild>
+              <Link to="/">
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filtres */}
+      <Card>
+        <CardContent className="p-3 sm:p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center justify-between w-full min-w-0">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 md:gap-4 flex-1 w-full min-w-0">
+              <div className="w-full sm:min-w-[150px] sm:max-w-[300px] flex-1 min-w-0">
+                <div className="relative">
+                  <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground z-10" />
+                  <Input
+                    id="search"
+                    placeholder="Nom, email ou téléphone..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 sm:pl-10 text-xs sm:text-sm md:text-base w-full min-w-0"
+                  />
+                </div>
+              </div>
+              <div className="w-full sm:min-w-[140px] sm:max-w-[200px] flex-shrink-0">
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <SelectTrigger className="w-full text-xs sm:text-sm md:text-base min-w-0">
+                    <SelectValue placeholder="Rôle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les rôles</SelectItem>
+                    {departments.map(dept => (
+                      <SelectItem key={dept} value={dept}>{getRoleLabel(dept as UserRole)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+              setIsAddDialogOpen(open);
+              if (!open) {
+                setEditingUser(null);
+                setNewUser({
+                  firstName: '',
+                  lastName: '',
+                  username: '',
+                  email: '',
+                  role: 'user',
+                  department: '',
+                  full_name: '',
+                  password: '',
+                  zone: '',
+                  phone: '',
+                  id: '',
+                  employeeId: ''
+                });
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setIsAddDialogOpen(true)} className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10">
+                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline truncate">Ajouter un utilisateur</span>
+                  <span className="sm:hidden truncate">Ajouter</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingUser ? 'Modifier l\'utilisateur' : 'Ajouter un utilisateur'}
@@ -414,44 +480,8 @@ const Users: React.FC = () => {
                 </Button>
               </DialogFooter>
             </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Filtres */}
-      <Card className='p-3 sm:p-4 w-full box-border'>
-        <CardHeader className="pb-2 sm:pb-3">
-          <CardTitle className="text-sm sm:text-base">Filtres</CardTitle>
-        </CardHeader>
-        <CardContent className="w-full min-w-0">
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end w-full min-w-0">
-            <div className="flex-1 w-full min-w-0 max-w-md sm:max-w-lg">
-              <Label htmlFor="search" className="text-xs sm:text-sm">Rechercher</Label>
-              <div className="relative w-full">
-                <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder="Nom, email ou téléphone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8 sm:pl-10 w-full text-sm"
-                />
-              </div>
-            </div>
-            <div className="w-full sm:w-auto min-w-0 max-w-md sm:max-w-none">
-              <Label htmlFor="role-filter" className="text-xs sm:text-sm">Rôle</Label>
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                <SelectTrigger className="w-full sm:w-48 text-sm min-w-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les rôles</SelectItem>
-                  {departments.map(dept => (
-                    <SelectItem key={dept} value={dept}>{getRoleLabel(dept as UserRole)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </CardContent>
       </Card>
@@ -500,7 +530,7 @@ const Users: React.FC = () => {
               </Button>
             </div>
           </div>
-          <div className="text-xs text-muted-foreground text-center sm:text-right">
+          <div className="text-xs text-muted-foreground text-left truncate whitespace-nowrap">
             Affichage de {startIndex + 1} à {Math.min(endIndex, filteredUsers.length)} sur {filteredUsers.length} utilisateur{filteredUsers.length > 1 ? 's' : ''}
           </div>
         </div>
@@ -509,23 +539,23 @@ const Users: React.FC = () => {
       {/* Liste des utilisateurs */}
       {isLoading ? (
         /* Skeleton Loading - Vue grille */
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-3 md:gap-4 lg:gap-4 w-full min-w-0 ${viewMode === 'table' ? 'lg:hidden' : ''}`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3 md:gap-4 w-full min-w-0 ${viewMode === 'table' ? 'lg:hidden' : ''}`}>
           {Array.from({ length: itemsPerPage }).map((_, index) => (
             <Card key={index} className="flex flex-col h-full w-full min-w-0 box-border">
-              <CardHeader className="pb-3 p-3 sm:p-4 lg:p-4 min-w-0">
-                <div className="flex items-start justify-between gap-2 min-w-0">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <Skeleton className="w-4 h-4 rounded-full" />
-                    <Skeleton className="h-4 w-24" />
+              <CardHeader className="pb-3 sm:pb-4 p-4 sm:p-5 md:p-6 min-w-0">
+                <div className="flex items-start justify-between gap-1 sm:gap-1.5 min-w-0">
+                  <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-1">
+                    <Skeleton className="w-5 h-5 sm:w-6 sm:h-6 rounded-full" />
+                    <Skeleton className="h-4 sm:h-5 w-20 sm:w-24" />
                   </div>
-                  <div className="flex gap-1">
-                    <Skeleton className="h-7 w-7" />
-                    <Skeleton className="h-7 w-7" />
+                  <div className="flex gap-0.5">
+                    <Skeleton className="h-5 w-5 sm:h-6 sm:w-6" />
+                    <Skeleton className="h-5 w-5 sm:h-6 sm:w-6" />
                   </div>
                 </div>
-                <Skeleton className="h-3 w-full mt-2" />
+                <Skeleton className="h-3 w-full mt-1.5" />
               </CardHeader>
-              <CardContent className="space-y-2 p-3 sm:p-4 lg:p-4 pt-0 min-w-0">
+              <CardContent className="space-y-1.5 sm:space-y-2 p-4 sm:p-5 md:p-6 pt-0 min-w-0">
                 <div className="flex items-center justify-between">
                   <Skeleton className="h-3 w-20" />
                   <Skeleton className="h-5 w-12" />
@@ -545,109 +575,109 @@ const Users: React.FC = () => {
       ) : (
         <>
           {/* Vue grille - toujours visible sur mobile, cachée sur desktop si viewMode est 'table' */}
-          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-3 md:gap-4 lg:gap-4 w-full min-w-0 ${viewMode === 'table' ? 'lg:hidden' : ''}`}>
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3 md:gap-4 w-full min-w-0 ${viewMode === 'table' ? 'lg:hidden' : ''}`}>
             {paginatedUsers.map((user) => (
-          <Card key={user.id} className="hover:shadow-lg transition-shadow flex flex-col h-full w-full min-w-0 box-border">
-            <CardHeader className="pb-3 p-3 sm:p-4 lg:p-4 min-w-0">
-              <div className="flex items-start justify-between gap-2 min-w-0">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <UserIcon className="w-4 h-4 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
-                  <CardTitle className="text-sm sm:text-sm lg:text-base truncate min-w-0">{user.full_name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'N/A'}</CardTitle>
-                </div>
-                <div className="flex gap-1 flex-shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      handleEditUser(user);
-                      setIsAddDialogOpen(true);
-                    }}
-                    className="h-7 w-7 sm:h-7 sm:w-7 p-0"
-                    title="Modifier"
-                  >
-                    <Pencil className="w-3 h-3 sm:w-3 sm:h-3" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
+              <Card key={user.id} className="hover:shadow-lg transition-shadow flex flex-col h-full w-full min-w-0 box-border">
+                <CardHeader className="pb-3 sm:pb-4 p-4 sm:p-5 md:p-6 min-w-0">
+                  <div className="flex items-start justify-between gap-1 sm:gap-1.5 min-w-0">
+                    <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-1">
+                      <UserIcon className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+                      <CardTitle className="text-sm sm:text-base md:text-lg truncate min-w-0">{user.full_name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'N/A'}</CardTitle>
+                    </div>
+                    <div className="flex gap-0.5 flex-shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 sm:h-7 sm:w-7 p-0 text-destructive hover:text-destructive"
-                        title="Supprimer"
+                        onClick={() => {
+                          handleEditUser(user);
+                          setIsAddDialogOpen(true);
+                        }}
+                        className="h-6 w-6 p-0"
+                        title="Modifier"
                       >
-                        <Trash2 className="w-3 h-3 sm:w-3 sm:h-3" />
+                        <Pencil className="w-3 h-3" />
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="w-[95vw] max-w-md">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="text-base sm:text-lg">Supprimer l'utilisateur</AlertDialogTitle>
-                        <AlertDialogDescription className="text-sm">
-                          Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-                        <AlertDialogCancel className="w-full sm:w-auto text-sm">Annuler</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteUser(user.id)} className="w-full sm:w-auto text-sm">
-                          Supprimer
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-              <CardDescription className="text-xs sm:text-xs line-clamp-2 mt-2">{user.email}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 p-3 sm:p-4 lg:p-4 pt-0 min-w-0">
-              <div className="flex items-center justify-between min-w-0">
-                <span className="text-xs sm:text-sm text-muted-foreground truncate">Nom d'utilisateur:</span>
-                <Badge variant="outline" className="text-xs sm:text-sm flex-shrink-0">{user.username || 'N/A'}</Badge>
-              </div>
-              <div className="flex items-center justify-between min-w-0">
-                <span className="text-xs sm:text-sm text-muted-foreground truncate">Rôle:</span>
-                <Badge variant={getRoleBadgeVariant(user.role)} className="text-xs sm:text-sm flex-shrink-0">
-                  {getRoleLabel(user.role)}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between min-w-0">
-                <span className="text-xs sm:text-sm text-muted-foreground truncate">Téléphone:</span>
-                <span className="text-xs sm:text-sm truncate">{user.phone || 'N/A'}</span>
-              </div>
-              <div className="flex items-center justify-between min-w-0">
-                <span className="text-xs sm:text-sm text-muted-foreground truncate">Statut:</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleUserStatus(user.id)}
-                  className="h-auto p-0"
-                >
-                  <Badge variant={user.isActive ? "default" : "secondary"} className="text-xs sm:text-sm">
-                    {user.isActive ? "Actif" : "Inactif"}
-                  </Badge>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="w-[95vw] max-w-md">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-base sm:text-lg">Supprimer l'utilisateur</AlertDialogTitle>
+                            <AlertDialogDescription className="text-sm">
+                              Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                            <AlertDialogCancel className="w-full sm:w-auto text-sm">Annuler</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteUser(user.id)} className="w-full sm:w-auto text-sm">
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                  <CardDescription className="text-xs line-clamp-2 mt-1.5">{user.email}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-1.5 sm:space-y-2 p-4 sm:p-5 md:p-6 pt-0 min-w-0">
+                  <div className="flex items-center justify-between min-w-0 gap-2">
+                    <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Nom d'utilisateur:</span>
+                    <Badge variant="outline" className="text-[10px] sm:text-xs flex-shrink-0 whitespace-nowrap">{user.username || 'N/A'}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between min-w-0 gap-2">
+                    <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Rôle:</span>
+                    <Badge variant={getRoleBadgeVariant(user.role)} className="text-[10px] sm:text-xs flex-shrink-0 whitespace-nowrap">
+                      {getRoleLabel(user.role)}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between min-w-0 gap-2">
+                    <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Téléphone:</span>
+                    <span className="text-[10px] sm:text-xs truncate ml-2">{user.phone || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center justify-between min-w-0 gap-2">
+                    <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Statut:</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleUserStatus(user.id)}
+                      className="h-auto p-0 flex-shrink-0"
+                    >
+                      <Badge variant={user.isActive ? "default" : "secondary"} className="text-[10px] sm:text-xs whitespace-nowrap">
+                        {user.isActive ? "Actif" : "Inactif"}
+                      </Badge>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
           
           {/* Vue tableau - visible seulement sur desktop quand viewMode est 'table' */}
           {viewMode === 'table' && (
             <Card className="w-full min-w-0 box-border hidden lg:block">
-              <CardHeader className="p-3 sm:p-4">
-                <CardTitle className="text-sm sm:text-base">Utilisateurs ({filteredUsers.length})</CardTitle>
+              <CardHeader className="p-2 sm:p-3 md:p-4">
+                <CardTitle className="text-xs sm:text-sm md:text-base">Utilisateurs ({filteredUsers.length})</CardTitle>
               </CardHeader>
-              <CardContent className="p-0 sm:p-3 w-full min-w-0 overflow-hidden">
+              <CardContent className="p-0 sm:p-2 md:p-3 w-full min-w-0 overflow-x-auto">
                 <div className="w-full min-w-0">
-                  <Table className="w-full">
+                  <Table className="w-full min-w-[600px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-xs sm:text-sm">Nom</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Email</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Nom d'utilisateur</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Rôle</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Téléphone</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Statut</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Actions</TableHead>
+                        <TableHead className="text-[10px] sm:text-xs md:text-sm">Nom</TableHead>
+                        <TableHead className="text-[10px] sm:text-xs md:text-sm">Email</TableHead>
+                        <TableHead className="text-[10px] sm:text-xs md:text-sm">Nom d'utilisateur</TableHead>
+                        <TableHead className="text-[10px] sm:text-xs md:text-sm">Rôle</TableHead>
+                        <TableHead className="text-[10px] sm:text-xs md:text-sm">Téléphone</TableHead>
+                        <TableHead className="text-[10px] sm:text-xs md:text-sm">Statut</TableHead>
+                        <TableHead className="text-[10px] sm:text-xs md:text-sm">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -675,22 +705,22 @@ const Users: React.FC = () => {
                   ) : (
                     paginatedUsers.map((user) => (
                       <TableRow key={user.id}>
-                        <TableCell className="font-medium text-sm max-w-[150px] sm:max-w-none">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <UserIcon className="w-4 h-4 text-primary flex-shrink-0" />
+                        <TableCell className="font-medium text-xs sm:text-sm max-w-[120px] sm:max-w-[150px] md:max-w-none">
+                          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                            <UserIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
                             <span className="truncate">{user.full_name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'N/A'}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm max-w-xs truncate min-w-0">{user.email}</TableCell>
-                        <TableCell className="text-sm whitespace-nowrap">
-                          <Badge variant="outline" className="text-xs sm:text-sm">{user.username || 'N/A'}</Badge>
+                        <TableCell className="text-xs sm:text-sm max-w-[150px] sm:max-w-xs truncate min-w-0">{user.email}</TableCell>
+                        <TableCell className="text-xs sm:text-sm whitespace-nowrap">
+                          <Badge variant="outline" className="text-[10px] sm:text-xs md:text-sm">{user.username || 'N/A'}</Badge>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
-                          <Badge variant={getRoleBadgeVariant(user.role)} className="text-xs sm:text-sm">
+                          <Badge variant={getRoleBadgeVariant(user.role)} className="text-[10px] sm:text-xs md:text-sm">
                             {getRoleLabel(user.role)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm truncate max-w-[120px] min-w-0">{user.phone || 'N/A'}</TableCell>
+                        <TableCell className="text-xs sm:text-sm truncate max-w-[100px] sm:max-w-[120px] min-w-0">{user.phone || 'N/A'}</TableCell>
                         <TableCell className="whitespace-nowrap">
                           <Button
                             variant="ghost"
@@ -760,10 +790,10 @@ const Users: React.FC = () => {
       {/* Skeleton Loading - Vue tableau */}
       {isLoading && viewMode === 'table' && (
         <Card className="w-full min-w-0 box-border hidden lg:block">
-          <CardHeader className="p-3 sm:p-4">
-            <Skeleton className="h-5 w-32" />
+          <CardHeader className="p-2 sm:p-3 md:p-4">
+            <Skeleton className="h-4 sm:h-5 w-24 sm:w-32" />
           </CardHeader>
-          <CardContent className="p-0 sm:p-3 w-full min-w-0 overflow-hidden">
+          <CardContent className="p-0 sm:p-2 md:p-3 w-full min-w-0 overflow-x-auto">
             <div className="w-full min-w-0">
               <Table className="w-full">
                 <TableHeader>

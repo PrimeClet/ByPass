@@ -339,7 +339,7 @@ const Notifications = () => {
 
       {/* Dialog pour afficher le contenu complet */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">
               {selectedNotification && getMaintenanceLabel(selectedNotification.data.title)}

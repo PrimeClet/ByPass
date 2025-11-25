@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, MapPin, Search, LayoutGrid, Table as TableIcon } from 'lucide-react';
+import { Plus, Edit2, Trash2, MapPin, Search, LayoutGrid, Table as TableIcon, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { useToast } from '@/hooks/use-toast';
 import { getAllZones, getEquipmentByZone } from '@/data/mockEquipment';
+import { Link } from 'react-router-dom';
 import api from '../axios'
 interface Zone {
   id: string;
@@ -175,75 +177,49 @@ const Zones = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 min-w-0 box-border">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words">Gestion des Zones</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground break-words">Gérez les zones et leurs superviseurs</p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreateDialog} className="gap-2 w-full sm:w-auto text-sm">
-              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Nouvelle Zone</span>
-              <span className="sm:hidden">Nouvelle</span>
+      {/* Header avec breadcrumb */}
+      <Card className="bg-card rounded-lg border">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              {/* Icône */}
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-white" />
+              </div>
+              {/* Titre, description et breadcrumb */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words mb-1">Gestion des Zones</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground break-words mb-2">Gérez les zones et leurs superviseurs</p>
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>
+                        <Link to="/">Tableau de bord</Link>
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>Zones</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+            </div>
+            {/* Bouton retour */}
+            <Button variant="outline" size="icon" className="flex-shrink-0 rounded-full w-10 h-10" asChild>
+              <Link to="/">
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">
-                {editingZone ? 'Modifier la zone' : 'Créer une nouvelle zone'}
-              </DialogTitle>
-              <DialogDescription className="text-sm">
-                {editingZone ? 'Modifiez les informations de la zone.' : 'Ajoutez une nouvelle zone au système.'}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <Label htmlFor="name">Nom de la zone</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    placeholder="Ex: Zone de production A"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Input
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Description de la zone"
-                    required
-                  />
-                </div>
-              </div>
-              <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">
-                  Annuler
-                </Button>
-                <Button type="submit" className="w-full sm:w-auto">
-                  {editingZone ? 'Modifier' : 'Créer'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Filtres */}
-      <Card className='p-3 sm:p-4 w-full box-border'>
-        <CardHeader className="pb-2 sm:pb-3">
-          <CardTitle className="text-sm sm:text-base">Filtres</CardTitle>
-        </CardHeader>
-        <CardContent className="w-full min-w-0">
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end w-full min-w-0">
-            <div className="flex-1 w-full min-w-0 max-w-md sm:max-w-lg">
-              <Label htmlFor="search" className="text-xs sm:text-sm">Rechercher</Label>
+      <Card className='w-full box-border'>
+        <CardContent className="p-4 sm:p-6 w-full min-w-0">
+          <div className="flex flex-col sm:flex-row gap-3 items-center sm:items-center justify-between w-full min-w-0">
+            <div className="w-full sm:flex-1 min-w-0">
               <div className="relative w-full">
                 <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                 <Input
@@ -255,6 +231,59 @@ const Zones = () => {
                 />
               </div>
             </div>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={openCreateDialog} className="gap-2 w-full sm:w-auto flex-shrink-0 text-sm">
+                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Nouvelle Zone</span>
+                  <span className="sm:hidden">Nouvelle</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-lg sm:text-xl">
+                    {editingZone ? 'Modifier la zone' : 'Créer une nouvelle zone'}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm">
+                    {editingZone ? 'Modifiez les informations de la zone.' : 'Ajoutez une nouvelle zone au système.'}
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <Label htmlFor="name">Nom de la zone</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        placeholder="Ex: Zone de production A"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <Label htmlFor="description">Description</Label>
+                      <Input
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        placeholder="Description de la zone"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">
+                      Annuler
+                    </Button>
+                    <Button type="submit" className="w-full sm:w-auto">
+                      {editingZone ? 'Modifier' : 'Créer'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         </CardContent>
       </Card>
@@ -303,7 +332,7 @@ const Zones = () => {
               </Button>
             </div>
           </div>
-          <div className="text-xs text-muted-foreground text-center sm:text-right">
+          <div className="text-xs text-muted-foreground text-left">
             Affichage de {startIndex + 1} à {Math.min(endIndex, filteredZones.length)} sur {filteredZones.length} zone{filteredZones.length > 1 ? 's' : ''}
           </div>
         </div>
@@ -312,26 +341,26 @@ const Zones = () => {
       {/* Liste des zones */}
       {isLoading ? (
         /* Skeleton Loading - Vue grille */
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-3 md:gap-4 lg:gap-4 w-full min-w-0 ${viewMode === 'table' ? 'lg:hidden' : ''}`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3 md:gap-4 w-full min-w-0 ${viewMode === 'table' ? 'lg:hidden' : ''}`}>
           {Array.from({ length: itemsPerPage }).map((_, index) => (
             <Card key={index} className="flex flex-col h-full w-full min-w-0 box-border">
-              <CardHeader className="pb-3 p-3 sm:p-4 lg:p-4 min-w-0">
-                <div className="flex items-start justify-between gap-2 min-w-0">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <Skeleton className="w-4 h-4 rounded-full" />
-                    <Skeleton className="h-4 w-24" />
+              <CardHeader className="pb-4 p-6 min-w-0">
+                <div className="flex items-start justify-between gap-1.5 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    <Skeleton className="w-3.5 h-3.5 rounded-full" />
+                    <Skeleton className="h-3 w-20" />
                   </div>
-                  <div className="flex gap-1">
-                    <Skeleton className="h-7 w-7" />
-                    <Skeleton className="h-7 w-7" />
+                  <div className="flex gap-0.5">
+                    <Skeleton className="h-6 w-6" />
+                    <Skeleton className="h-6 w-6" />
                   </div>
                 </div>
-                <Skeleton className="h-3 w-full mt-2" />
+                <Skeleton className="h-3 w-full mt-1.5" />
               </CardHeader>
-              <CardContent className="space-y-2 p-3 sm:p-4 lg:p-4 pt-0 min-w-0">
+              <CardContent className="space-y-1.5 p-6 pt-0 min-w-0">
                 <div className="flex items-center justify-between">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="h-5 w-12" />
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-4 w-10" />
                 </div>
               </CardContent>
             </Card>
@@ -340,42 +369,42 @@ const Zones = () => {
       ) : (
         <>
           {/* Vue grille - toujours visible sur mobile, cachée sur desktop si viewMode est 'table' */}
-          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-3 md:gap-4 lg:gap-4 w-full min-w-0 ${viewMode === 'table' ? 'lg:hidden' : ''}`}>
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3 md:gap-4 w-full min-w-0 ${viewMode === 'table' ? 'lg:hidden' : ''}`}>
             {paginatedZones.map((zone) => (
           <Card key={zone.id} className="hover:shadow-lg transition-shadow flex flex-col h-full w-full min-w-0 box-border">
-            <CardHeader className="pb-3 p-3 sm:p-4 lg:p-4 min-w-0">
-              <div className="flex items-start justify-between gap-2 min-w-0">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <MapPin className="w-4 h-4 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
-                  <CardTitle className="text-sm sm:text-sm lg:text-base truncate min-w-0">{zone.name}</CardTitle>
+            <CardHeader className="pb-4 p-6 min-w-0">
+              <div className="flex items-start justify-between gap-1.5 min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                  <MapPin className="w-6 h-6 text-primary flex-shrink-0" />
+                  <CardTitle className="text-lg truncate min-w-0">{zone.name}</CardTitle>
                 </div>
-                <div className="flex gap-1 flex-shrink-0">
+                <div className="flex gap-0.5 flex-shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleEdit(zone)}
-                    className="h-7 w-7 sm:h-7 sm:w-7 p-0"
+                    className="h-6 w-6 p-0"
                     title="Modifier"
                   >
-                    <Edit2 className="w-3 h-3 sm:w-3 sm:h-3" />
+                    <Edit2 className="w-3 h-3" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(zone.id)}
-                    className="h-7 w-7 sm:h-7 sm:w-7 p-0 text-destructive hover:text-destructive"
+                    className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                     title="Supprimer"
                   >
-                    <Trash2 className="w-3 h-3 sm:w-3 sm:h-3" />
+                    <Trash2 className="w-3 h-3" />
                   </Button>
                 </div>
               </div>
-              <CardDescription className="text-xs sm:text-xs line-clamp-2 mt-2">{zone.description}</CardDescription>
+              <CardDescription className="text-xs line-clamp-2 mt-1.5">{zone.description}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2 p-3 sm:p-4 lg:p-4 pt-0 min-w-0">
+            <CardContent className="space-y-1.5 p-6 pt-0 min-w-0">
               <div className="flex items-center justify-between min-w-0">
-                <span className="text-xs sm:text-sm text-muted-foreground truncate">Équipements:</span>
-                <Badge variant="secondary" className="text-xs sm:text-sm flex-shrink-0">{zone.equipmentCount}</Badge>
+                <span className="text-xs text-muted-foreground truncate">Équipements:</span>
+                <Badge variant="secondary" className="text-xs flex-shrink-0">{zone.equipmentCount}</Badge>
               </div>
             </CardContent>
           </Card>

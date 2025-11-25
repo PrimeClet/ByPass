@@ -175,7 +175,7 @@ export default function Dashboard() {
             Vue d'ensemble du système Bypass Guard
           </p>
         </div>
-        <Button asChild className="w-full sm:w-auto text-sm h-8 sm:h-9">
+        <Button asChild className="w-full sm:w-auto text-sm h-8 sm:h-9 flex-shrink-0">
           <Link to="/requests/new" className="flex items-center justify-center">
             <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
             Nouvelle demande
@@ -187,7 +187,7 @@ export default function Dashboard() {
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
         {stats.map((stat) => (
           <Card key={stat.title} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4 min-w-0">
               <CardTitle className="text-xs sm:text-sm font-medium truncate min-w-0 flex-1">
                 {stat.title}
               </CardTitle>
@@ -195,9 +195,9 @@ export default function Dashboard() {
                 <stat.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${stat.color}`} />
               </div>
             </CardHeader>
-            <CardContent className="p-3 sm:p-4 pt-0">
+            <CardContent className="p-3 sm:p-4 pt-0 min-w-0">
               <div className="text-xl sm:text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1 break-words">
                 {stat.description}
               </p>
             </CardContent>
@@ -205,7 +205,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2 w-full min-w-0">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2 w-full min-w-0 overflow-x-hidden">
         {/* Recent requests */}
         <Card className="w-full min-w-0 box-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
@@ -219,24 +219,24 @@ export default function Dashboard() {
               </CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4">
+          <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4 min-w-0 overflow-x-hidden">
             {requestList?.slice(0, 3).map((request) => (
-              <div key={request.id} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors min-w-0">
-                <div className="space-y-1 flex-1 min-w-0">
+              <div key={request.id} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors min-w-0 w-full box-border">
+                <div className="space-y-1 flex-1 min-w-0 w-full sm:w-auto">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-xs sm:text-sm truncate">{request.request_code}</span>
-                    <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs"}>
+                    <span className="font-medium text-xs sm:text-sm truncate min-w-0">{request.request_code}</span>
+                    <Badge variant="outline" className={getPriorityColor(request.priority) + " text-xs flex-shrink-0"}>
                       {request.priority}
                     </Badge>
                   </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{request.equipment.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{request.sensor.name}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{request.equipment?.name || 'N/A'}</p>
+                  <p className="text-xs text-muted-foreground truncate">{request.sensor?.name || 'N/A'}</p>
                 </div>
                 <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2 sm:gap-1 flex-shrink-0">
                   <Badge className={getStatusColor(request.status) + " text-xs"}>
                     {request.status}
                   </Badge>
-                  <p className="text-xs text-muted-foreground truncate">{request.requester.full_name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{request.requester?.full_name || 'N/A'}</p>
                 </div>
               </div>
             ))}
@@ -262,34 +262,34 @@ export default function Dashboard() {
               Surveillance en temps réel
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4">
-            <div className="space-y-2 sm:space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs sm:text-sm truncate">Équipements surveillés</span>
+          <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4 min-w-0 overflow-x-hidden">
+            <div className="space-y-2 sm:space-y-3 min-w-0">
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <span className="text-xs sm:text-sm truncate flex-1 min-w-0">Équipements surveillés</span>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="w-2 h-2 rounded-full bg-success"></div>
-                  <span className="text-xs sm:text-sm font-medium">{monitoring} actifs</span>
+                  <span className="text-xs sm:text-sm font-medium whitespace-nowrap">{monitoring} actifs</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs sm:text-sm truncate">Capteurs en ligne</span>
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <span className="text-xs sm:text-sm truncate flex-1 min-w-0">Capteurs en ligne</span>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="w-2 h-2 rounded-full bg-success"></div>
-                  <span className="text-xs sm:text-sm font-medium">{online} connectés</span>
+                  <span className="text-xs sm:text-sm font-medium whitespace-nowrap">{online} connectés</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs sm:text-sm truncate">Alertes actives</span>
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <span className="text-xs sm:text-sm truncate flex-1 min-w-0">Alertes actives</span>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="w-2 h-2 rounded-full bg-warning"></div>
-                  <span className="text-xs sm:text-sm font-medium">{active} en cours</span>
+                  <span className="text-xs sm:text-sm font-medium whitespace-nowrap">{active} en cours</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs sm:text-sm truncate">Performance système</span>
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <span className="text-xs sm:text-sm truncate flex-1 min-w-0">Performance système</span>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-success" />
-                  <span className="text-xs sm:text-sm font-medium">{systeme}%</span>
+                  <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-success flex-shrink-0" />
+                  <span className="text-xs sm:text-sm font-medium whitespace-nowrap">{systeme}%</span>
                 </div>
               </div>
             </div>
