@@ -10,12 +10,14 @@ import {
   Activity,
   TrendingUp,
   Shield,
-  ArrowRight
+  ArrowRight,
+  BarChart3
 } from "lucide-react"
-import { cva } from "class-variance-authority";
 import { useState, useEffect } from 'react';
 import api from '../axios'
-import { useLocation, Link } from "react-router-dom"
+import { Link } from "react-router-dom"
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from "recharts"
 
 
 export default function Dashboard() {
@@ -29,6 +31,11 @@ export default function Dashboard() {
   const [active, setActive] = useState(0)
   const [systeme, setSysteme] = useState(0)
   const [requestList, setRequestList] = useState([]);
+  const [chartData, setChartData] = useState([]);
+  const [isLoadingChart, setIsLoadingChart] = useState(true);
+  const [chartFilter, setChartFilter] = useState<'day' | 'month' | 'year'>('day');
+  const [sensorsData, setSensorsData] = useState([]);
+  const [isLoadingSensors, setIsLoadingSensors] = useState(true);
 
 
   useEffect(() => {
@@ -73,7 +80,113 @@ export default function Dashboard() {
       console.error('Error fetching data:', error);
     });
   
+    // Request statistics for chart
+    fetchChartData('day');
+  
+    // Top sensors statistics
+    fetchTopSensors();
+  
   }, [])
+
+  const fetchChartData = (filter: 'day' | 'month' | 'year') => {
+    setIsLoadingChart(true);
+    let days = 30;
+    if (filter === 'day') {
+      days = 30;
+    } else if (filter === 'month') {
+      days = 365; // 12 mois
+    } else if (filter === 'year') {
+      days = 1095; // 3 ans
+    }
+
+    api.get(`/dashboard/request-statistics?days=${days}`)
+    .then(response => {
+      // Format data for chart based on filter
+      let formattedData;
+      if (filter === 'day') {
+        // Afficher les 30 derniers jours avec format JJ/MM
+        formattedData = response.data.slice(-30).map((item: any) => ({
+          date: new Date(item.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+          totales: item.total,
+          validées: item.approved,
+          rejetées: item.rejected
+        }));
+      } else if (filter === 'month') {
+        // Agréger par mois
+        const monthlyData: { [key: string]: { totales: number; validées: number; rejetées: number; sortKey: string } } = {};
+        response.data.forEach((item: any) => {
+          const date = new Date(item.date);
+          const monthKey = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+          const sortKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          if (!monthlyData[monthKey]) {
+            monthlyData[monthKey] = { totales: 0, validées: 0, rejetées: 0, sortKey };
+          }
+          monthlyData[monthKey].totales += item.total;
+          monthlyData[monthKey].validées += item.approved;
+          monthlyData[monthKey].rejetées += item.rejected;
+        });
+        formattedData = Object.entries(monthlyData)
+          .sort((a, b) => a[1].sortKey.localeCompare(b[1].sortKey))
+          .slice(-12) // Garder les 12 derniers mois
+          .map(([date, data]) => ({
+            date: date.charAt(0).toUpperCase() + date.slice(1),
+            totales: data.totales,
+            validées: data.validées,
+            rejetées: data.rejetées
+          }));
+      } else {
+        // Agréger par année
+        const yearlyData: { [key: string]: { totales: number; validées: number; rejetées: number } } = {};
+        response.data.forEach((item: any) => {
+          const yearKey = new Date(item.date).getFullYear().toString();
+          if (!yearlyData[yearKey]) {
+            yearlyData[yearKey] = { totales: 0, validées: 0, rejetées: 0 };
+          }
+          yearlyData[yearKey].totales += item.total;
+          yearlyData[yearKey].validées += item.approved;
+          yearlyData[yearKey].rejetées += item.rejected;
+        });
+        formattedData = Object.entries(yearlyData)
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([date, data]) => ({
+            date,
+            ...data
+          }));
+      }
+      setChartData(formattedData);
+      setIsLoadingChart(false);
+    })
+    .catch(error => {
+      console.error('Error fetching chart data:', error);
+      setIsLoadingChart(false);
+    });
+  }
+
+  const handleFilterChange = (filter: 'day' | 'month' | 'year') => {
+    setChartFilter(filter);
+    fetchChartData(filter);
+  }
+
+  const fetchTopSensors = () => {
+    setIsLoadingSensors(true);
+    api.get('/dashboard/top-sensors')
+    .then(response => {
+      const formattedData = response.data
+        .sort((a: any, b: any) => b.request_count - a.request_count)
+        .map((item: any) => ({
+          name: item.sensor_name.length > 15 ? item.sensor_name.substring(0, 15) + '...' : item.sensor_name,
+          fullName: item.sensor_name,
+          equipment: item.equipment_name,
+          demandes: item.request_count
+        }));
+      setSensorsData(formattedData);
+      setIsLoadingSensors(false);
+    })
+    .catch(error => {
+      console.error('Error fetching top sensors data:', error);
+      setIsLoadingSensors(false);
+    });
+  }
 
   
 
@@ -204,6 +317,179 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Chart */}
+      <Card className="w-full min-w-0 box-border">
+        <CardHeader className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                <span className="truncate">Statistiques des demandes</span>
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                {chartFilter === 'day' && 'Évolution des demandes sur les 30 derniers jours'}
+                {chartFilter === 'month' && 'Évolution des demandes par mois'}
+                {chartFilter === 'year' && 'Évolution des demandes par année'}
+              </CardDescription>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <Button
+                variant={chartFilter === 'day' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleFilterChange('day')}
+                className="text-xs h-8"
+              >
+                Jour
+              </Button>
+              <Button
+                variant={chartFilter === 'month' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleFilterChange('month')}
+                className="text-xs h-8"
+              >
+                Mois
+              </Button>
+              <Button
+                variant={chartFilter === 'year' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleFilterChange('year')}
+                className="text-xs h-8"
+              >
+                Année
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-3 sm:p-4 min-w-0 overflow-x-hidden">
+          {isLoadingChart ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-muted-foreground">Chargement...</div>
+            </div>
+          ) : chartData.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-muted-foreground">Aucune donnée disponible</div>
+            </div>
+          ) : (
+            <ChartContainer
+              config={{
+                totales: {
+                  label: "Demandes totales",
+                  color: "hsl(221, 83%, 53%)", // bleu
+                },
+                validées: {
+                  label: "Demandes validées",
+                  color: "hsl(142, 76%, 36%)", // vert
+                },
+                rejetées: {
+                  label: "Demandes rejetées",
+                  color: "hsl(0, 84%, 60%)", // rouge
+                },
+              }}
+              className="h-[300px] w-full"
+            >
+              <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="date" 
+                  className="text-xs"
+                  tick={{ fill: 'currentColor' }}
+                />
+                <YAxis 
+                  className="text-xs"
+                  tick={{ fill: 'currentColor' }}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Line 
+                  type="monotone" 
+                  dataKey="totales" 
+                  stroke="hsl(221, 83%, 53%)" 
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  name="Demandes totales"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="validées" 
+                  stroke="hsl(142, 76%, 36%)" 
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  name="Demandes validées"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="rejetées" 
+                  stroke="hsl(0, 84%, 60%)" 
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  name="Demandes rejetées"
+                />
+              </LineChart>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Top Sensors Chart */}
+      <Card className="w-full min-w-0 box-border">
+        <CardHeader className="p-3 sm:p-4">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+            <span className="truncate">Capteurs les plus demandés</span>
+          </CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
+            Top 10 des capteurs ayant fait l'objet du plus grand nombre de demandes
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-3 sm:p-4 min-w-0 overflow-x-hidden">
+          {isLoadingSensors ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-muted-foreground">Chargement...</div>
+            </div>
+          ) : sensorsData.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-muted-foreground">Aucune donnée disponible</div>
+            </div>
+          ) : (
+            <ChartContainer
+              config={{
+                demandes: {
+                  label: "Nombre de demandes",
+                  color: "hsl(221, 83%, 53%)", // bleu
+                },
+              }}
+              className="h-[400px] w-full"
+            >
+              <BarChart data={sensorsData} margin={{ top: 5, right: 10, left: 0, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="name" 
+                  className="text-xs"
+                  tick={{ fill: 'currentColor' }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis 
+                  className="text-xs"
+                  tick={{ fill: 'currentColor' }}
+                />
+                <ChartTooltip 
+                  content={<ChartTooltipContent />}
+                  cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                />
+                <Bar 
+                  dataKey="demandes" 
+                  fill="hsl(221, 83%, 53%)"
+                  radius={[4, 4, 0, 0]}
+                  name="Demandes"
+                />
+              </BarChart>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2 w-full min-w-0 overflow-x-hidden">
         {/* Recent requests */}

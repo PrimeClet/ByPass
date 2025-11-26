@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
@@ -24,8 +24,6 @@ import {
   FileText,
   AlertTriangle,
   ArrowLeft,
-  LayoutGrid,
-  Table as TableIcon
 } from "lucide-react"
 import { useLocation, Link } from "react-router-dom"
 import api from '../axios'
@@ -42,7 +40,6 @@ export default function History() {
   const [requestList, setRequestList] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(3);
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>(isMobile ? 'grid' : 'grid');
   const [isLoading, setIsLoading] = useState(true);
 
   const filteredHistory = (requestList ?? []).filter(item => {
@@ -100,6 +97,16 @@ export default function History() {
       case "Rejeté": return <XCircle className="w-4 h-4" />
       case "rejected": return <XCircle className="w-4 h-4" />
       default: return <FileText className="w-4 h-4" />
+    }
+  }
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'director': return 'Approbateur N2'
+      case 'supervisor': return 'Approbateur N1'
+      case 'user': return 'Demandeur'
+      case 'administrator': return 'Administrateur'
+      default: return role || ''
     }
   }
 
@@ -169,7 +176,7 @@ export default function History() {
                 <ArrowLeft className="w-4 h-4" />
               </Link>
             </Button>
-          </div>
+        </div>
         </CardContent>
       </Card>
 
@@ -177,8 +184,8 @@ export default function History() {
       <div className="flex justify-end">
         <Button variant="outline" size={isMobile ? "sm" : "default"} className="gap-2">
           <Download className="w-4 h-4" />
-          <span className="hidden sm:inline">Exporter</span>
-        </Button>
+            <span className="hidden sm:inline">Exporter</span>
+          </Button>
       </div>
 
       {/* Filters */}
@@ -261,26 +268,6 @@ export default function History() {
                 </SelectContent>
               </Select>
             </div>
-            {!isMobile && (
-              <div className="flex items-center gap-2 border rounded-md p-1">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="h-8"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'table' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('table')}
-                  className="h-8"
-                >
-                  <TableIcon className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
           </div>
           <div className="text-xs sm:text-sm text-muted-foreground text-left sm:text-right w-full sm:w-auto">
             Affichage de {startIndex + 1} à {Math.min(endIndex, filteredHistory.length)} sur {filteredHistory.length} demande{filteredHistory.length > 1 ? 's' : ''}
@@ -290,235 +277,157 @@ export default function History() {
 
       {/* History list */}
       {isLoading ? (
-        <>
-          {/* Skeleton Loading - Vue grille */}
-          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3 md:gap-4 w-full min-w-0 ${viewMode === 'table' ? 'lg:hidden' : ''}`}>
-            {Array.from({ length: itemsPerPage }).map((_, index) => (
-              <Card key={index} className="flex flex-col h-full w-full min-w-0 box-border">
-                <CardHeader className="pb-4 p-6 min-w-0">
-                  <div className="flex items-start justify-between gap-1.5 min-w-0">
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <Skeleton className="w-8 h-8 rounded-full" />
-                      <div className="min-w-0 flex-1">
-                        <Skeleton className="h-5 w-32 mb-2" />
-                        <Skeleton className="h-5 w-20" />
+        <div className="space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
+          {Array.from({ length: itemsPerPage }).map((_, index) => (
+            <Card key={index} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
+          <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                  <div className="flex flex-col gap-4 sm:gap-6">
+                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                      {/* Section 1 : Gauche - Skeleton */}
+                      <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                        <Skeleton className="w-10 h-10 sm:w-12 sm:h-12 rounded-full" />
+                        <div className="flex-1 min-w-0">
+                          <Skeleton className="h-5 w-32 mb-2" />
+                          <Skeleton className="h-4 w-20 mb-2" />
+                          <Skeleton className="h-3 w-40 mb-1" />
+                          <Skeleton className="h-3 w-36" />
+                        </div>
+                      </div>
+                      {/* Section 2 : Centre - Skeleton */}
+                      <div className="flex flex-row gap-3 sm:gap-4 flex-1 min-w-0 items-center sm:items-center justify-between flex-wrap">
+                        <Skeleton className="h-3 w-40" />
+                        <Skeleton className="h-3 w-40" />
+                      </div>
+                    </div>
+                    {/* Ligne du bas - Skeleton */}
+                    <div className="flex flex-col gap-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Separator className="my-1" />
+                      <div className="flex flex-row justify-between items-center gap-4">
+                        <Skeleton className="h-3 w-28" />
+                        <Skeleton className="h-4 w-24" />
                       </div>
                     </div>
                   </div>
-                  <Skeleton className="h-4 w-full mt-2" />
-                </CardHeader>
-                <CardContent className="space-y-2 p-6 pt-0 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-3 w-16" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-3 w-12" />
-                    <Skeleton className="h-3 w-16" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          
-          {/* Skeleton Loading - Vue tableau */}
-          {viewMode === 'table' && (
-            <Card className="w-full min-w-0 box-border hidden lg:block">
-              <CardHeader className="p-3 sm:p-4">
-                <Skeleton className="h-5 w-32" />
-              </CardHeader>
-              <CardContent className="p-0 sm:p-3 w-full min-w-0 overflow-hidden">
-                <div className="w-full min-w-0">
-                  <Table className="w-full min-w-[700px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs sm:text-sm">Code</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Équipement</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Capteur</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Demandeur</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Date</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Statut</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {Array.from({ length: itemsPerPage }).map((_, index) => (
-                        <TableRow key={index}>
-                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                          <TableCell>
-                            <Skeleton className="h-8 w-8" />
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
                 </div>
               </CardContent>
             </Card>
-          )}
-        </>
-      ) : viewMode === 'grid' ? (
-        <>
-          {/* Vue grille - toujours visible sur mobile, cachée sur desktop si viewMode est 'table' */}
-          {!isLoading && paginatedHistory.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 sm:p-12 text-center">
-                <HistoryIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
-                  {requestList.length === 0 ? 'Aucune demande' : 'Aucun résultat'}
-                </h3>
-                <p className="text-muted-foreground">
-                  {requestList.length === 0 
-                    ? 'Aucune demande dans l\'historique.'
-                    : 'Aucune demande ne correspond à vos critères de recherche.'
-                  }
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3 md:gap-4 w-full min-w-0">
-              {paginatedHistory.map((item) => (
-                <Card key={item.id} className="hover:shadow-lg transition-shadow flex flex-col h-full w-full min-w-0 box-border">
-                  <CardHeader className="pb-4 p-6 min-w-0">
-                    <div className="flex items-start justify-between gap-1.5 min-w-0">
-                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 flex-shrink-0">
-                          {getStatusIcon(item.status)}
+          ))}
+        </div>
+      ) : paginatedHistory.length === 0 ? (
+        <Card className="w-full box-border">
+          <CardContent className="text-center py-6 sm:py-8">
+            <HistoryIcon className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-sm sm:text-base font-semibold mb-2">
+                    {requestList.length === 0 ? 'Aucune demande' : 'Aucun résultat'}
+                  </h3>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+                    {requestList.length === 0 
+                      ? 'Aucune demande dans l\'historique.'
+                      : 'Aucune demande ne correspond à vos critères de recherche.'
+                    }
+                  </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
+          {paginatedHistory.map((item) => (
+            <Card key={item.id} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col gap-4 sm:gap-6">
+                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                    {/* Section 1 : Gauche - Icône + Code + Badges + Equipement/Capteur */}
+                    <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                      {/* Icône circulaire avec status */}
+                      <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-100 flex-shrink-0">
+                        <div className="text-blue-600">
+                          {(item.status === "Approuvé" || item.status === "approved") ? (
+                            <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+                          ) : getStatusIcon(item.status) ? (
+                            <div className="w-5 h-5 sm:w-6 sm:h-6">
+                              {getStatusIcon(item.status)}
+                </div>
+              ) : (
+                            <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
+                          )}
                         </div>
+                      </div>
+                      {/* Code de demande et badges */}
                         <div className="min-w-0 flex-1">
-                          <CardTitle className="text-lg truncate min-w-0">{item.request_code}</CardTitle>
-                          <Badge className={`${getStatusColor(item.status)} mt-1`}>
-                            <span className="text-xs">{item.status}</span>
-                          </Badge>
+                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap mb-2">
+                          <CardTitle className="text-base sm:text-lg font-bold truncate min-w-0">
+                            {item.request_code}
+                          </CardTitle>
+                          <Badge className={getStatusColor(item.status) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                            {item.status}
+                            </Badge>
+                          </div>
+                        {/* Équipement et capteur sur deux lignes */}
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground truncate">
+                            {item.equipment?.name || 'N/A'}
+                          </p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {item.sensor?.name || 'N/A'}
+                          </p>
                         </div>
                       </div>
                     </div>
-                    <CardDescription className="text-xs line-clamp-2 mt-1.5">
-                      {item.equipment.name} - {item.sensor.name}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2 p-6 pt-0 min-w-0">
-                    <div className="flex items-center justify-between min-w-0">
-                      <span className="text-xs text-muted-foreground truncate">Demandeur:</span>
-                      <span className="text-xs truncate ml-2">{item.requester.full_name}</span>
-                    </div>
-                    <div className="flex items-center justify-between min-w-0">
-                      <span className="text-xs text-muted-foreground truncate">Validateur:</span>
-                      <span className="text-xs truncate ml-2">{item.validator?.full_name || 'N/A'}</span>
-                    </div>
-                    <div className="flex items-center justify-between min-w-0">
-                      <span className="text-xs text-muted-foreground truncate">Durée:</span>
-                      <span className="text-xs truncate ml-2">{Math.round(diffInHours(item.end_time, item.start_time))}h</span>
-                    </div>
-                    <div className="flex items-center justify-between min-w-0">
-                      <span className="text-xs text-muted-foreground truncate">Date:</span>
-                      <span className="text-xs truncate ml-2">
-                        {new Date(item.created_at).toLocaleDateString("fr-FR", {
-                          dateStyle: isMobile ? "short" : "medium"
-                        })}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </>
-      ) : (
-        <>
-          {/* Vue tableau - visible seulement sur desktop quand viewMode est 'table' */}
-          {viewMode === 'table' && (
-        <Card className="w-full min-w-0 box-border hidden lg:block">
-          <CardHeader className="p-3 sm:p-4">
-            <CardTitle className="text-sm sm:text-base">Historique ({filteredHistory.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="overflow-x-auto -mx-4 sm:mx-0">
-              <div className="inline-block min-w-full align-middle px-4 sm:px-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                      <TableHead className="min-w-[80px] sm:min-w-[100px] text-xs sm:text-sm">Code</TableHead>
-                      <TableHead className="min-w-[100px] sm:min-w-[120px] text-xs sm:text-sm hidden sm:table-cell">Équipement</TableHead>
-                      <TableHead className="min-w-[100px] sm:min-w-[120px] text-xs sm:text-sm hidden md:table-cell">Capteur</TableHead>
-                      <TableHead className="min-w-[100px] sm:min-w-[120px] text-xs sm:text-sm hidden lg:table-cell">Demandeur</TableHead>
-                      <TableHead className="min-w-[80px] sm:min-w-[100px] text-xs sm:text-sm">Statut</TableHead>
-                      <TableHead className="min-w-[110px] sm:min-w-[140px] text-xs sm:text-sm">Date demande</TableHead>
-                      <TableHead className="min-w-[110px] sm:min-w-[140px] text-xs sm:text-sm hidden md:table-cell">Date validation</TableHead>
-                      <TableHead className="min-w-[100px] sm:min-w-[120px] text-xs sm:text-sm hidden lg:table-cell">Validateur</TableHead>
-                      <TableHead className="min-w-[60px] sm:min-w-[80px] text-xs sm:text-sm">Durée</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedHistory.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8">
-                        <HistoryIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                          <h3 className="text-base sm:text-lg font-semibold mb-2">
-                          {requestList.length === 0 ? 'Aucune demande' : 'Aucun résultat'}
-                        </h3>
-                          <p className="text-sm sm:text-base text-muted-foreground">
-                          {requestList.length === 0 
-                            ? 'Aucune demande dans l\'historique.'
-                            : 'Aucune demande ne correspond à vos critères de recherche.'
-                          }
+
+                    {/* Section 2 : Centre - Date demande + Date validation */}
+                    <div className="flex flex-row gap-3 sm:gap-4 flex-1 min-w-0 items-center sm:items-center justify-between flex-wrap">
+                      <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                        Demande: {new Date(item.created_at).toLocaleString("fr-FR", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                            })}
                         </p>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedHistory.map((item) => (
-                      <TableRow key={item.id}>
-                          <TableCell className="font-medium text-xs sm:text-sm">
-                          {item.request_code}
-                        </TableCell>
-                          <TableCell className="break-words text-xs sm:text-sm hidden sm:table-cell">{item.equipment.name}</TableCell>
-                          <TableCell className="break-words text-xs sm:text-sm hidden md:table-cell">{item.sensor.name}</TableCell>
-                          <TableCell className="break-words text-xs sm:text-sm hidden lg:table-cell">{item.requester.full_name}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(item.status)}>
-                              <span className="text-xs">{item.status}</span>
-                          </Badge>
-                        </TableCell>
-                          <TableCell className="text-xs sm:text-sm whitespace-nowrap">
-                          {new Date(item.created_at).toLocaleString("fr-FR", {
-                              dateStyle: isMobile ? "short" : "medium",
-                            timeStyle: "short",
-                          })}
-                        </TableCell>
-                          <TableCell className="text-xs sm:text-sm whitespace-nowrap hidden md:table-cell">
-                          {new Date(item.validated_at).toLocaleString("fr-FR", {
-                              dateStyle: isMobile ? "short" : "medium",
-                            timeStyle: "short",
-                          })}
-                        </TableCell>
-                          <TableCell className="break-words text-xs sm:text-sm hidden lg:table-cell">{item.validator?.full_name || 'N/A'}</TableCell>
-                          <TableCell className="text-xs sm:text-sm">
-                            {Math.round(diffInHours(item.end_time, item.start_time))}h
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-              </div>
+                      {item.validated_at && (
+                        <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                          Validation: {new Date(item.validated_at).toLocaleString("fr-FR", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Ligne du bas : Demandeur puis Validateur et Durée sur la même ligne */}
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm font-semibold text-left">
+                      {item.requester?.role && getRoleLabel(item.requester.role) && (
+                        <span className="text-muted-foreground font-normal">{getRoleLabel(item.requester.role)}: </span>
+                      )}
+                      {item.requester?.full_name || 'N/A'}
+                    </p>
+                    <Separator className="my-1" />
+                    <div className="flex flex-row justify-between items-center gap-4">
+                      {item.validator?.full_name && (
+                        <p className="text-xs sm:text-sm text-muted-foreground text-left">
+                          {item.validator?.role && getRoleLabel(item.validator.role) && (
+                            <span>{getRoleLabel(item.validator.role)}: </span>
+                          )}
+                          {item.validator.full_name}
+                        </p>
+                      )}
+                      <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap text-right ml-auto">
+                        Durée: {Math.round(diffInHours(item.end_time, item.start_time))} Heure{Math.round(diffInHours(item.end_time, item.start_time)) > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
             </div>
           </CardContent>
         </Card>
-          )}
-        </>
+          ))}
+        </div>
       )}
 
       {/* Pagination */}

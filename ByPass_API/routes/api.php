@@ -36,6 +36,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
     Route::get('/dashboard/recent-requests', [DashboardController::class, 'recentRequests']);
     Route::get('/dashboard/system-status', [DashboardController::class, 'systemStatus']);
+    Route::get('/dashboard/request-statistics', [DashboardController::class, 'requestStatistics']);
+    Route::get('/dashboard/top-sensors', [DashboardController::class, 'topSensors']);
 
     // Demandes
     Route::get('/requests', [RequestController::class, 'index']);
