@@ -154,7 +154,7 @@ const Notifications = () => {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
+    <div className="w-full p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 min-w-0 box-border">
         <div className="min-w-0 flex-1">
           <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words">Notifications</h1>
