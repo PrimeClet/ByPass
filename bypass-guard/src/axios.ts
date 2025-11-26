@@ -4,7 +4,7 @@ import { store } from '@/store/store'; // ton Redux store
 
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
+  baseURL: 'http://127.0.0.1:8001/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -22,4 +22,4 @@ api.interceptors.request.use(config => {
   return config;
 }, error => Promise.reject(error));
 
-export default api;
+export default api;                               
