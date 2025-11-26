@@ -71,10 +71,8 @@ const Notifications = () => {
   const unreadCount = notifications.filter(n => !n.read_at).length;
   const readCount = notifications.filter(n => n.read_at).length;
 
-  // Trier les notifications : non lues en premier
+  // Trier les notifications uniquement par date (plus récentes en premier) pour garder l'ordre chronologique
   const sortedNotifications = [...notifications].sort((a, b) => {
-    if (!a.read_at && b.read_at) return -1;
-    if (a.read_at && !b.read_at) return 1;
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
@@ -85,18 +83,9 @@ const Notifications = () => {
     return true;
   });
 
-  // Séparer les notifications lues et non lues
-  const unreadNotifications = filteredNotifications.filter(n => !n.read_at);
-  const readNotifications = filteredNotifications.filter(n => n.read_at);
-
-  // Limiter l'affichage selon displayedCount (10 premières au total)
-  const displayedUnreadNotifications = unreadNotifications.slice(0, displayedCount);
-  const remainingSlots = Math.max(0, displayedCount - displayedUnreadNotifications.length);
-  const displayedReadNotifications = readNotifications.slice(0, remainingSlots);
-  
-  // Calculer combien de notifications sont affichées au total
-  const totalDisplayed = displayedUnreadNotifications.length + displayedReadNotifications.length;
-  const hasMore = filteredNotifications.length > totalDisplayed;
+  // Limiter l'affichage selon displayedCount
+  const displayedNotifications = filteredNotifications.slice(0, displayedCount);
+  const hasMore = filteredNotifications.length > displayedCount;
 
   // Réinitialiser le compteur quand on change de filtre
   useEffect(() => {
@@ -215,95 +204,53 @@ const Notifications = () => {
         </Card>
       ) : (
         <div className="space-y-4 sm:space-y-6">
-          {/* Section Notifications non lues */}
-          {displayedUnreadNotifications.length > 0 && (
-            <div className="space-y-3 sm:space-y-4">
-              <div className="flex items-center gap-2 px-2">
-                <Circle className="w-4 h-4 text-primary" />
-                <h2 className="text-sm sm:text-base font-semibold text-foreground">
-                  Non lues ({unreadNotifications.length})
-                </h2>
-              </div>
-              {displayedUnreadNotifications.map((notification) => (
-                <Card 
-                  key={notification.id} 
-                  onClick={() => handleNotificationClick(notification)}
-                  className="border-primary/50 bg-primary/5 hover:bg-primary/10 transition-colors shadow-sm cursor-pointer"
-                >
-                  <CardHeader className="p-3 sm:p-4">
-                    <div className="flex items-start justify-between gap-3 min-w-0">
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0 bg-primary" />
-                        <div className="min-w-0 flex-1">
-                          <CardTitle className="text-sm sm:text-base mb-1 font-semibold text-foreground">
-                            {getMaintenanceLabel(notification.data.title)}
-                          </CardTitle>
-                          <CardDescription className="text-xs sm:text-sm mt-1 text-foreground/80">
-                            {notification.data.description}
-                          </CardDescription>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {new Date(notification.created_at).toLocaleString('fr-FR', {
-                              dateStyle: 'medium',
-                              timeStyle: 'short',
-                            })}
-                          </p>
-                        </div>
+          {/* Afficher toutes les notifications dans l'ordre chronologique */}
+          {displayedNotifications.map((notification) => {
+            const isUnread = !notification.read_at;
+            return (
+              <Card 
+                key={notification.id} 
+                onClick={() => handleNotificationClick(notification)}
+                className={`transition-colors cursor-pointer ${
+                  isUnread 
+                    ? "border-primary/50 bg-primary/5 hover:bg-primary/10 shadow-sm" 
+                    : "bg-card/50 hover:bg-card opacity-75"
+                }`}
+              >
+                <CardHeader className="p-3 sm:p-4">
+                  <div className="flex items-start justify-between gap-3 min-w-0">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${isUnread ? "bg-primary" : "bg-transparent"}`} />
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className={`text-sm sm:text-base mb-1 ${isUnread ? "font-semibold text-foreground" : "text-muted-foreground font-normal"}`}>
+                          {getMaintenanceLabel(notification.data.title)}
+                        </CardTitle>
+                        <CardDescription className={`text-xs sm:text-sm mt-1 ${isUnread ? "text-foreground/80" : "text-muted-foreground"}`}>
+                          {notification.data.description}
+                        </CardDescription>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {new Date(notification.created_at).toLocaleString('fr-FR', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          })}
+                        </p>
                       </div>
-                      <Badge variant="default" className="text-xs flex-shrink-0 bg-primary">
-                        Non lue
-                      </Badge>
                     </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {/* Section Notifications lues */}
-          {displayedReadNotifications.length > 0 && (
-            <div className="space-y-3 sm:space-y-4">
-              {displayedUnreadNotifications.length > 0 && (
-                <div className="flex items-center gap-2 px-2 pt-4 border-t">
-                  <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
-                  <h2 className="text-sm sm:text-base font-semibold text-muted-foreground">
-                    Lues ({readNotifications.length})
-                  </h2>
-                </div>
-              )}
-              {displayedReadNotifications.map((notification) => (
-                <Card 
-                  key={notification.id} 
-                  onClick={() => handleNotificationClick(notification)}
-                  className="bg-card/50 hover:bg-card transition-colors opacity-75 cursor-pointer"
-                >
-                  <CardHeader className="p-3 sm:p-4">
-                    <div className="flex items-start justify-between gap-3 min-w-0">
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0 bg-transparent" />
-                        <div className="min-w-0 flex-1">
-                          <CardTitle className="text-sm sm:text-base mb-1 text-muted-foreground font-normal">
-                            {getMaintenanceLabel(notification.data.title)}
-                          </CardTitle>
-                          <CardDescription className="text-xs sm:text-sm mt-1 text-muted-foreground">
-                            {notification.data.description}
-                          </CardDescription>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {new Date(notification.created_at).toLocaleString('fr-FR', {
-                              dateStyle: 'medium',
-                              timeStyle: 'short',
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-xs flex-shrink-0 text-muted-foreground border-muted-foreground/30">
-                        Lue
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          )}
+                    <Badge 
+                      variant={isUnread ? "default" : "outline"} 
+                      className={`text-xs flex-shrink-0 ${
+                        isUnread 
+                          ? "bg-primary" 
+                          : "text-muted-foreground border-muted-foreground/30"
+                      }`}
+                    >
+                      {isUnread ? "Non lue" : "Lue"}
+                    </Badge>
+                  </div>
+                </CardHeader>
+              </Card>
+            );
+          })}
 
           {/* Message si aucun résultat après filtrage */}
           {filteredNotifications.length === 0 && (
