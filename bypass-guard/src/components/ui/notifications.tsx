@@ -60,11 +60,9 @@ export default function Tinting({ userId, notification, onNotificationUpdate }) 
     return reasonLabels[key] ?? key; // si pas trouvé, on retourne la clé brute
   }
 
-  // Trier les notifications : non lues en premier
+  // Trier les notifications uniquement par date (plus récentes en premier) pour garder l'ordre chronologique
   const sortedNotifications = [...notifications].sort((a, b) => {
-    if (!a.read_at && b.read_at) return -1;
-    if (a.read_at && !b.read_at) return 1;
-    return 0;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   const handleNotificationClick = async (notification) => {
@@ -144,7 +142,7 @@ export default function Tinting({ userId, notification, onNotificationUpdate }) 
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-70 p-0">
+      <DropdownMenuContent align="end" className="w-[350px] p-0">
         <DropdownMenuLabel className="flex items-center justify-between w-full">
           <span>Notifications</span>
           {notifications?.filter(n => !n.read_at).length > 0 && (
@@ -162,7 +160,7 @@ export default function Tinting({ userId, notification, onNotificationUpdate }) 
                       <DropdownMenuItem
                           key={i}
                           onClick={() => handleNotificationClick(n)}
-                          className={`flex flex-col items-start p-3 rounded-lg transition-all cursor-pointer
+                          className={`flex flex-col items-start p-3 mx-2 rounded-lg transition-all cursor-pointer
                           ${
                           !n.read_at
                               ? "bg-primary/10 border-l-2 border-primary hover:bg-primary/20"
@@ -216,7 +214,7 @@ export default function Tinting({ userId, notification, onNotificationUpdate }) 
 
       {/* Dialog pour afficher le contenu complet */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="w-[70%] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[75%] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">
               {selectedNotification && getMaintenanceLabel(selectedNotification.data.title)}
@@ -258,6 +256,7 @@ export default function Tinting({ userId, notification, onNotificationUpdate }) 
           )}
         </DialogContent>
       </Dialog>
+
     </DropdownMenu>
   )
 }

@@ -470,7 +470,7 @@ const Sensors: React.FC = () => {
               } else {
                 handleAddSensor();
               }
-            }} className="space-y-4 max-h-[60vh] sm:max-h-96 overflow-y-auto">
+            }} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="equipment" className="text-sm">Équipement</Label>
                 <Select value={newSensor.equipmentId} onValueChange={(value) => setNewSensor({...newSensor, equipmentId: value})}>

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CalendarIcon, AlertTriangle, FileText, Clock, Shield } from 'lucide-react';
+import { CalendarIcon, AlertTriangle, FileText, Clock, Shield, Loader2 } from 'lucide-react';
 import { Equipment, Sensor } from '@/types/equipment';
 import { BypassReason, UrgencyLevel, RiskLevel } from '@/types/request';
 import { getCurrentUser } from '@/data/mockUsers';
@@ -57,12 +57,13 @@ export const BypassRequestForm = () => {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
     setValue,
     watch,
     reset
   } = useForm<RequestFormData>({
     resolver: zodResolver(requestSchema),
+    mode: 'onChange',
     defaultValues: {
       mitigationMeasures: [],
       urgencyLevel: 'normal',
@@ -204,25 +205,19 @@ export const BypassRequestForm = () => {
 
   const onSubmit = async (data: RequestFormData) => {
     try {
-      // Simulate API call
-      api({
+      await api({
         method: 'post',
         url: `/requests`,
         data: data
-      })
-      .then(data => {
-        if (data) {
-          toast.success("Demande de Bypass Soumis avec Succes");
-        } else {
-          toast.error("Probleme de connexion");
-        }
-      })
+      });
+      toast.success("Demande de Bypass Soumis avec Succes");
       reset();
       setSelectedZone('');
       setSelectedEquipment(null);
       setSelectedSensor(null);
     } catch (error) {
       console.error('Erreur lors de la soumission:', error);
+      toast.error("Erreur lors de la soumission de la demande");
     }
   };
 
@@ -672,10 +667,17 @@ export const BypassRequestForm = () => {
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={!isValid || isSubmitting}
               className="min-w-[120px]"
             >
-              {isSubmitting ? 'Soumission...' : 'Soumettre la demande'}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Soumission...
+                </>
+              ) : (
+                'Soumettre la demande'
+              )}
             </Button>
           </div>
         </form>
