@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\Zone;
 use Illuminate\Http\Request;
 use Log;
+use OpenApi\Attributes as OA;
 
 class EquipmentController extends Controller
 {
@@ -18,7 +19,34 @@ class EquipmentController extends Controller
         return response()->json($zone->equipements);
     }
 
-
+    #[OA\Get(
+        path: "/equipment",
+        summary: "Liste des équipements",
+        description: "Récupère la liste des équipements avec filtres optionnels",
+        tags: ["Équipements"],
+        security: [["sanctum" => []]],
+        parameters: [
+            new OA\Parameter(name: "status", in: "query", description: "Filtrer par statut", schema: new OA\Schema(type: "string", enum: ["operational", "maintenance", "down", "standby"])),
+            new OA\Parameter(name: "search", in: "query", description: "Rechercher dans nom ou localisation", schema: new OA\Schema(type: "string")),
+            new OA\Parameter(name: "page", in: "query", description: "Numéro de page", schema: new OA\Schema(type: "integer", example: 1)),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Liste des équipements paginée",
+                content: new OA\MediaType(
+                    mediaType: "application/json",
+                    schema: new OA\Schema(
+                        type: "object",
+                        properties: [
+                            new OA\Property(property: "data", type: "array", items: new OA\Items(ref: "#/components/schemas/Equipment")),
+                        ]
+                    )
+                )
+            ),
+            new OA\Response(response: 401, description: "Non authentifié", ref: "#/components/schemas/Error"),
+        ]
+    )]
     public function index(Request $request)
     {
         $query = Equipment::with('sensors', 'zone');
@@ -52,6 +80,43 @@ class EquipmentController extends Controller
         return $consonants . '-' . strtoupper($zoneCode) . '-' . sprintf('%03d', $num);
     }
 
+    #[OA\Post(
+        path: "/equipment",
+        summary: "Créer un équipement",
+        description: "Crée un nouvel équipement. Accessible uniquement aux administrateurs.",
+        tags: ["Équipements"],
+        security: [["sanctum" => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: "application/json",
+                schema: new OA\Schema(
+                    required: ["name", "type", "criticite", "fabricant", "zone"],
+                    properties: [
+                        new OA\Property(property: "name", type: "string", example: "Équipement 1"),
+                        new OA\Property(property: "type", type: "string", example: "Capteur de température"),
+                        new OA\Property(property: "criticite", type: "string", example: "Haute"),
+                        new OA\Property(property: "fabricant", type: "string", example: "Fabricant XYZ"),
+                        new OA\Property(property: "description", type: "string", nullable: true, example: "Description de l'équipement"),
+                        new OA\Property(property: "zone", type: "string", example: "Zone A"),
+                        new OA\Property(property: "status", type: "string", enum: ["operational", "maintenance", "down", "standby"], example: "operational"),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: "Équipement créé avec succès",
+                content: new OA\MediaType(
+                    mediaType: "application/json",
+                    schema: new OA\Schema(ref: "#/components/schemas/Equipment")
+                )
+            ),
+            new OA\Response(response: 403, description: "Non autorisé (administrateur requis)", ref: "#/components/schemas/Error"),
+            new OA\Response(response: 422, description: "Erreur de validation", ref: "#/components/schemas/Error"),
+        ]
+    )]
     public function store(CreateEquipmentRequest $request)
     {
         if($request->validated()){
@@ -89,11 +154,67 @@ class EquipmentController extends Controller
         
     }
 
+    #[OA\Get(
+        path: "/equipment/{equipment}",
+        summary: "Détails d'un équipement",
+        description: "Récupère les détails d'un équipement spécifique avec ses capteurs",
+        tags: ["Équipements"],
+        security: [["sanctum" => []]],
+        parameters: [
+            new OA\Parameter(name: "equipment", in: "path", required: true, description: "ID de l'équipement", schema: new OA\Schema(type: "integer")),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Détails de l'équipement",
+                content: new OA\MediaType(
+                    mediaType: "application/json",
+                    schema: new OA\Schema(ref: "#/components/schemas/Equipment")
+                )
+            ),
+            new OA\Response(response: 404, description: "Équipement non trouvé", ref: "#/components/schemas/Error"),
+        ]
+    )]
     public function show(Equipment $equipment)
     {
         return response()->json($equipment->load('sensors'));
     }
 
+    #[OA\Put(
+        path: "/equipment/{equipment}",
+        summary: "Mettre à jour un équipement",
+        description: "Met à jour les informations d'un équipement. Accessible uniquement aux administrateurs.",
+        tags: ["Équipements"],
+        security: [["sanctum" => []]],
+        parameters: [
+            new OA\Parameter(name: "equipment", in: "path", required: true, description: "ID de l'équipement", schema: new OA\Schema(type: "integer")),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: "application/json",
+                schema: new OA\Schema(
+                    properties: [
+                        new OA\Property(property: "name", type: "string", example: "Équipement 1"),
+                        new OA\Property(property: "type", type: "string", example: "Capteur de température"),
+                        new OA\Property(property: "status", type: "string", enum: ["operational", "maintenance", "down", "standby"], example: "operational"),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Équipement mis à jour avec succès",
+                content: new OA\MediaType(
+                    mediaType: "application/json",
+                    schema: new OA\Schema(ref: "#/components/schemas/Equipment")
+                )
+            ),
+            new OA\Response(response: 403, description: "Non autorisé (administrateur requis)", ref: "#/components/schemas/Error"),
+            new OA\Response(response: 404, description: "Équipement non trouvé", ref: "#/components/schemas/Error"),
+        ]
+    )]
     public function update(Request $request, Equipment $equipment)
     {
         if (!auth()->user()->isAdministrator()) {
@@ -132,6 +253,32 @@ class EquipmentController extends Controller
         return response()->json($equipment);
     }
 
+    #[OA\Delete(
+        path: "/equipment/{equipment}",
+        summary: "Supprimer un équipement",
+        description: "Supprime un équipement. Accessible uniquement aux administrateurs.",
+        tags: ["Équipements"],
+        security: [["sanctum" => []]],
+        parameters: [
+            new OA\Parameter(name: "equipment", in: "path", required: true, description: "ID de l'équipement", schema: new OA\Schema(type: "integer")),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Équipement supprimé avec succès",
+                content: new OA\MediaType(
+                    mediaType: "application/json",
+                    schema: new OA\Schema(
+                        properties: [
+                            new OA\Property(property: "message", type: "string", example: "Équipement supprimé avec succès"),
+                        ]
+                    )
+                )
+            ),
+            new OA\Response(response: 403, description: "Non autorisé (administrateur requis)", ref: "#/components/schemas/Error"),
+            new OA\Response(response: 404, description: "Équipement non trouvé", ref: "#/components/schemas/Error"),
+        ]
+    )]
     public function destroy(Equipment $equipment)
     {
         if (!auth()->user()->isAdministrator()) {

@@ -22,6 +22,8 @@ Artisan::command('inspire', function () {
 
 Schedule::command('app:process-requests')->twiceDaily(8, 15);
 
+Schedule::command('sensors:reactivate');
+
 Schedule::call(function () {
     Log::info('Le cron job fonctionne correctement.');
 })->everyMinute();
