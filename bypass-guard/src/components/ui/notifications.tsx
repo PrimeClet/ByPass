@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, Fragment } from "react"
 import { Link } from "react-router-dom"
 import echo from "../../utils/echo"
 import {
@@ -37,13 +37,99 @@ export default function Tinting({ userId, notification, onNotificationUpdate }) 
     setNotifications(notification || [])
   }, [notification])
 
-  // Écoute temps réel
+  // Gestion des notifications : polling en local, temps réel avec Pusher en production
   useEffect(() => {
-    echo.private(`App.Models.User.${userId}`).notification((notif) => {
-      console.log("Notif temps réel:", notif)
-      setNotifications((prev) => [notif, ...prev])
-    })
-  }, [userId])
+    if (!userId) {
+      return;
+    }
+
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const pusherKey = import.meta.env.VITE_PUSHER_APP_KEY || process.env.VITE_PUSHER_APP_KEY;
+    const usePolling = isLocal && !pusherKey;
+    
+    // Si on est en local et que Pusher n'est pas configuré, utiliser le polling
+    if (usePolling) {
+      console.log('Mode local détecté - utilisation du polling pour les notifications');
+      
+      const fetchNotifications = async () => {
+        try {
+          const response = await api.get('/notifications');
+          if (response.data && Array.isArray(response.data)) {
+            setNotifications(response.data);
+          }
+        } catch (error) {
+          console.error('Error fetching notifications:', error);
+        }
+      };
+
+      // Récupérer immédiatement
+      fetchNotifications();
+
+      // Puis toutes les 5 secondes
+      const interval = setInterval(fetchNotifications, 5000);
+
+      return () => clearInterval(interval);
+    } else if (echo) {
+      // Sinon, utiliser Echo pour les notifications temps réel
+      console.log('Utilisation de Pusher pour les notifications temps réel');
+      
+      try {
+        const channel = echo.private(`App.Models.User.${userId}`);
+        
+        channel.notification((notification) => {
+          console.log("Notif temps réel reçue:", notification);
+          
+          // Laravel envoie les notifications broadcast avec une structure spécifique
+          // Le payload est dans notification.data ou directement dans notification
+          const notificationData = notification.data || notification;
+          
+          // Formater la notification pour correspondre au format attendu
+          const formattedNotification = {
+            id: notificationData.id || notification.id || Date.now(),
+            data: notificationData,
+            read_at: null,
+            created_at: notificationData.created_at || new Date().toISOString(),
+          };
+          
+          setNotifications((prev) => {
+            // Vérifier si la notification existe déjà pour éviter les doublons
+            const exists = prev.some(n => 
+              (n.id === formattedNotification.id) || 
+              (n.data?.request_id === notificationData.request_id && n.data?.request_id)
+            );
+            
+            if (exists) {
+              return prev;
+            }
+            
+            return [formattedNotification, ...prev];
+          });
+          
+          // Afficher un toast pour les nouvelles notifications
+          toast({
+            title: "Nouvelle notification",
+            description: notificationData.description || notificationData.title || "Vous avez une nouvelle notification",
+          });
+        });
+
+        // Gestion des erreurs de connexion
+        channel.error((error) => {
+          console.error("Erreur de connexion Pusher:", error);
+        });
+
+        // Nettoyage lors du démontage
+        return () => {
+          try {
+            echo.leave(`App.Models.User.${userId}`);
+          } catch (error) {
+            console.warn('Error leaving channel:', error);
+          }
+        };
+      } catch (error) {
+        console.error('Error setting up Echo channel:', error);
+      }
+    }
+  }, [userId, toast])
 
   const reasonLabels: Record<BypassReason, string> = {
     preventive_maintenance: 'Maintenance préventive',
@@ -155,10 +241,9 @@ export default function Tinting({ userId, notification, onNotificationUpdate }) 
         {notifications?.length > 0 ? (
           <>
             <ScrollArea className="h-64">
-              {sortedNotifications.slice(0, 3).map((n, i) => (
-                  <>
+              {sortedNotifications.slice(0, 20).map((n, index) => (
+                  <div key={n.id ?? `${n.created_at}-${index}`}>
                       <DropdownMenuItem
-                          key={i}
                           onClick={() => handleNotificationClick(n)}
                           className={`flex flex-col items-start p-3 mx-2 rounded-lg transition-all cursor-pointer
                           ${
@@ -169,7 +254,7 @@ export default function Tinting({ userId, notification, onNotificationUpdate }) 
                       >
                           <div className="flex items-center gap-2 w-full">
                               <p className={`font-medium flex-1 ${
-                                !n.read_at ? "text-foreground font-semibold" : "text-muted-foreground"
+                                !n.read_at ? "text-foreground font-semibold" : "text-black"
                               }`}>
                                 {getMaintenanceLabel(n.data.title)}
                               </p>
@@ -178,7 +263,7 @@ export default function Tinting({ userId, notification, onNotificationUpdate }) 
                               )}
                           </div>
                           <p className={`text-xs mt-1 ${
-                            !n.read_at ? "text-foreground" : "text-muted-foreground"
+                            !n.read_at ? "text-foreground" : "text-black"
                           }`}>
                             {n.data.description}
                           </p>
@@ -187,7 +272,7 @@ export default function Tinting({ userId, notification, onNotificationUpdate }) 
                           </p> */}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                  </>
+                  </div>
               ))}
             </ScrollArea>
             {notifications.length > 3 && (

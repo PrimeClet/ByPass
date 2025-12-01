@@ -33,7 +33,7 @@ class CreateRequestRequest extends FormRequest
             'operationalImpact' => 'required|in:very_low,low,medium,high,very_high',
             'environmentalImpact' => 'required|in:very_low,low,medium,high,very_high',
             'mitigationMeasures' => 'required',
-            'contingencyPlan' => 'sometimes'
+            'contingencyPlan' => 'nullable|string|max:2000'
         ];
     }
 }

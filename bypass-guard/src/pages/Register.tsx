@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserPlus, Eye, EyeOff } from 'lucide-react';
 import type { UserRole } from '@/types/user';
+import { PhoneInputField } from '@/components/ui/phone-input';
 
 const registerSchema = z.object({
   firstName: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères'),
@@ -308,10 +309,10 @@ export default function Register() {
                   <FormItem>
                     <FormLabel>Téléphone (optionnel)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="tel"
-                        placeholder="+33 1 23 45 67 89"
-                        {...field}
+                      <PhoneInputField
+                        value={field.value || ''}
+                        onChange={(value) => field.onChange(value || '')}
+                        placeholder="Numéro de téléphone"
                       />
                     </FormControl>
                     <FormMessage />

@@ -8,7 +8,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 
-class RequestCreate extends Notification
+class RequestUpdate extends Notification
 {
     use Queueable;
 
@@ -47,30 +47,11 @@ class RequestCreate extends Notification
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Nouvelle Requête Créée')
-            ->view('emails.requests.created', [
+            ->subject('Demande Modifiée')
+            ->view('emails.requests.updated', [
                 'request' => $this->request,
             ]);
     }
-
-    /**
-     * Get the array representation of the notification.
-     *
-     * @return array<string, mixed>
-     */
-    // public function toArray(object $notifiable): array
-    // {
-    //     return [
-    //         //
-    //     ];
-    // }
-
-    /**
-     * Get the notification's delivery channels.
-     *
-     * @param mixed $notifiable
-     * @return array
-     */
 
     /**
      * Get the array representation of the notification.
@@ -94,7 +75,7 @@ class RequestCreate extends Notification
             'equipment_name' => $this->request->equipment->name ?? 'N/A',
             'sensor_name' => $this->request->sensor->name ?? 'N/A',
             'url' => url('/validation'),
-            'created_at' => $this->request->created_at->toDateTimeString(),
+            'created_at' => $this->request->updated_at->toDateTimeString(),
         ];
     }
 
@@ -103,7 +84,7 @@ class RequestCreate extends Notification
         $this->request->load(['requester', 'equipment.zone', 'sensor']);
         
         return new BroadcastMessage([
-            'type' => 'request.created',
+            'type' => 'request.updated',
             'id' => $this->request->id,
             'request_id' => $this->request->id,
             'request_code' => $this->request->request_code,
@@ -115,7 +96,8 @@ class RequestCreate extends Notification
             'equipment_name' => $this->request->equipment->name ?? 'N/A',
             'sensor_name' => $this->request->sensor->name ?? 'N/A',
             'url' => url('/validation'),
-            'created_at' => $this->request->created_at->toDateTimeString(),
+            'created_at' => $this->request->updated_at->toDateTimeString(),
         ]);
     }
 }
+

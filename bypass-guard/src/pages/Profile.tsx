@@ -12,6 +12,7 @@ import { RootState } from '../store/store';
 import { toast } from 'sonner';
 import api from '../axios';
 import { Link } from 'react-router-dom';
+import { PhoneInputField } from '@/components/ui/phone-input';
 
 const Profile: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.user);
@@ -21,7 +22,7 @@ const Profile: React.FC = () => {
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
     email: user?.email || '',
-    phone: '',
+    phone: user?.phone || '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
@@ -108,7 +109,7 @@ const Profile: React.FC = () => {
     setFormData({
       full_name: user?.full_name || '',
       email: user?.email || '',
-      phone: '',
+      phone: user?.phone || '',
       currentPassword: '',
       newPassword: '',
       confirmPassword: ''
@@ -265,18 +266,17 @@ const Profile: React.FC = () => {
               <div className="space-y-2 w-full min-w-0">
                 <Label htmlFor="phone" className="text-xs sm:text-sm">Téléphone</Label>
                 {isEditing ? (
-                  <Input
+                  <PhoneInputField
                     id="phone"
-                    type="tel"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(value) => setFormData({ ...formData, phone: value || '' })}
                     placeholder="Numéro de téléphone"
                     className="w-full min-w-0 text-sm"
                   />
                 ) : (
                   <div className="flex items-center gap-2 p-2 rounded-md bg-muted min-w-0">
                     <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-xs sm:text-sm truncate">{formData.phone || 'Non renseigné'}</span>
+                    <span className="text-xs sm:text-sm truncate">{user.phone || formData.phone || 'Non renseigné'}</span>
                   </div>
                 )}
               </div>

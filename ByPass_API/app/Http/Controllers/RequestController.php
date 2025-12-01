@@ -13,6 +13,9 @@ use App\Http\Requests\ValidateRequestRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use App\Notifications\RequestCreate;
+use App\Notifications\RequestUpdate;
+use App\Notifications\RequestValidated;
+use App\Notifications\RequestLevel1Approved;
 use Carbon\Carbon;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Notification;
@@ -105,7 +108,7 @@ class RequestController extends Controller
         }
 
         // Seuls les admins peuvent voir toutes les demandes
-        if (!auth()->user()->isAdministrator()) {
+        if (!auth()->user()->hasPermissionTo('requests.view.all')) {
             $query->where('requester_id', auth()->id());
         }
 
@@ -168,6 +171,81 @@ class RequestController extends Controller
                 'to' => $to
             ]);
         }
+    }
+
+    public function sendInteractiveMediaMessages(string $to, string $bodyText, array $quickReplies): void
+    {
+        $baseUrl = config('services.whapi.base_url');
+        $token = config('services.whapi.token');
+        
+        if (!$token) return;
+        
+        $buttons = [];
+        foreach ($quickReplies as $reply) {
+            $button = [
+                'type' => $reply['type'] ?? 'quick_reply',
+                'id' => $reply['id'],
+                'title' => $reply['title']
+            ];
+            
+            if (isset($reply['url'])) $button['url'] = $reply['url'];
+            if (isset($reply['phone_number'])) $button['phone_number'] = $reply['phone_number'];
+            
+            $buttons[] = $button;
+        }
+         
+        $payload = [
+            'to' => $to,
+            'header' => [
+                'text' => "ByPass Systeme de Notification"
+            ],
+            'body' => ['text' => $bodyText],
+            'type' => 'button',
+            'action' => ['buttons' => $buttons]
+        ];
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $token,
+                'Content-Type' => 'application/json'
+            ])->post($baseUrl . '/messages/interactive', $payload);
+           
+            if ($response->successful()) {
+                Log::info('Message media envoyé', ['to' => $to]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Exception envoi media', ['error' => $e->getMessage()]);
+        }
+    }
+
+
+    private function getReasonLabel(string $key): string
+    {
+        $reasonLabels = [
+            'preventive_maintenance' => 'Maintenance préventive',
+            'corrective_maintenance' => 'Maintenance corrective',
+            'calibration' => 'Étalonnage',
+            'testing' => 'Tests',
+            'emergency_repair' => 'Réparation d\'urgence',
+            'system_upgrade' => 'Mise à niveau système',
+            'investigation' => 'Investigation',
+            'other' => 'Autre'
+        ];
+
+        return $reasonLabels[$key] ?? $key;
+    }
+
+    private function getUrgencyLabel(string $key): string
+    {
+        $urgencyLabels = [
+            'low' => 'Faible',
+            'normal' => 'Normale',
+            'high' => 'Élevée',
+            'critical' => 'Critique',
+            'emergency' => 'Urgence'
+        ];
+
+        return $urgencyLabels[$key] ?? $key;
     }
 
     #[OA\Post(
@@ -234,7 +312,7 @@ class RequestController extends Controller
 
         $rqs = Request::all()->count() + 1 ;
 
-        $bypassRequest = Request::create([
+        $requestData = [
             'request_code' => $this->bypassCode(null, $rqs),
             'requester_id' => auth()->id(),
             'title' => $request->reason,
@@ -250,50 +328,92 @@ class RequestController extends Controller
             'impact_operationnel' => $request->operationalImpact,
             'impact_environnemental' => $request->environmentalImpact,
             'mesure_attenuation' => implode(', ',$request->mitigationMeasures),
-            'plan_contingence' => $request->contingencyPlan,
-        ]);
+            'plan_contingence' => $request->contingencyPlan ?? null,
+        ];
+        
+        // Pour les demandes critical/emergency, initialiser les champs de double validation
+        if (in_array($urgencyLevel, ['critical', 'emergency'])) {
+            $requestData['validation_status_level1'] = 'pending';
+            $requestData['validation_status_level2'] = 'pending';
+        }
+        
+        $bypassRequest = Request::create($requestData);
 
         $users = [];
 
         Log::info('Urgency Level: ' . $request->urgencyLevel);
 
         if(in_array($urgencyLevel, $validUrgencyLevels)){
-            $users = User::where('role', 'supervisor')->orWhere('role', 'administrator')->get();
+            // Demandes normales : notifier supervisors et administrators (validation niveau 1)
+            $users = User::permission('requests.validate.level1')->get();
         } else{
-            $users = User::Where('role', 'administrator')->get();
+            // Demandes critical/emergency : notifier d'abord les supervisors pour validation niveau 1
+            $users = User::permission('requests.validate.level1')->get();
         }
 
-        $byPass = $bypassRequest->load(['validator','requester', 'validator', 'equipment.zone', 'sensor']);
-
+        // Recharger la demande avec toutes les relations nécessaires
+        $bypassRequest->refresh();
+        $byPass = $bypassRequest->load(['requester', 'equipment.zone', 'sensor']);
 
         $message = "📌 *Nouvelle Demande Créée*\n" .
            "👤 Demandeur : {$byPass->requester->full_name}\n" .
-           "📝 Titre : {$byPass->title}\n" .
-           "⚡ Priorité : {$byPass->priority}\n" .
+           "📝 Titre : {$this->getReasonLabel($byPass->title)}\n" .
+           "⚡ Priorité : {$this->getUrgencyLabel($byPass->priority)}\n" .
            "📅 Soumis le : " . now()->format('d/m/Y H:i') . "\n" .
            "🔍 Statut : En cours de validation.";
 
+        // Envoyer un message au demandeur (gestion d'erreur sans bloquer)
+        if (auth()->user()->phone) {
+            try {
         $phone = ltrim(auth()->user()->phone, '+');
-
-        Log::info('Users: ' . $users);
-
         $this->sendTextMessage($phone, $message);
+            } catch (\Exception $e) {
+                Log::warning('Erreur envoi WhatsApp au demandeur: ' . $e->getMessage());
+            }
+        }
         
+        Log::info('Users to notify: ' . $users->count());
+
+        // Envoyer les notifications via Laravel Notification (database, broadcast, mail)
+        // Gestion d'erreur pour ne pas bloquer la création de la requête
+        if ($users->isNotEmpty()) {
+            try {
         Notification::send($users, new RequestCreate($bypassRequest));
+            } catch (\Exception $e) {
+                Log::warning('Erreur envoi notifications: ' . $e->getMessage());
+                // Essayer d'envoyer au moins en base de données
+                try {
+                    foreach ($users as $user) {
+                        $user->notify(new RequestCreate($bypassRequest));
+                    }
+                } catch (\Exception $e2) {
+                    Log::error('Erreur critique envoi notifications DB: ' . $e2->getMessage());
+                }
+            }
+        }
 
         $adminMessage = "📌 *Nouvelle Demande à Valider*\n" .
                 "👤 Demandeur : {$byPass->requester->full_name}\n" .
-                "📝 Titre : {$byPass->title}\n" .
-                "⚡ Priorité : {$byPass->priority}\n" .
+                "📝 Titre : {$this->getReasonLabel($byPass->title)}\n" .
+                "⚡ Priorité : {$this->getUrgencyLabel($byPass->priority)}\n".
                 "📅 Soumis le : " . now()->format('d/m/Y H:i') . "\n" .
                 "🔍 Statut : En attente de votre validation.\n" .
                 "📂 Consultez la demande dans le système pour plus de détails.";
 
-        // Send the message to each administrator
+        $quickReplies = [
+            ['id' => 'web', 'title' => '🌐 Listes à valider', 'type' => 'url', 'url' => env('APP_URL').'/validation']
+        ];
+                
+
+        // Send the message to each administrator (gestion d'erreur sans bloquer)
         foreach ($users as $user) {
             if ($user->phone) {
+                try {
                 $adminPhone = ltrim($user->phone, '+');
-                $this->sendTextMessage($adminPhone, $adminMessage);
+                $this->sendInteractiveMediaMessages($adminPhone, $adminMessage, $quickReplies);
+                } catch (\Exception $e) {
+                    Log::warning("Erreur envoi WhatsApp à {$user->full_name}: " . $e->getMessage());
+                }
             }
         }
 
@@ -335,7 +455,7 @@ class RequestController extends Controller
         $user = auth()->user();
         
         // Vérifier les permissions
-        if (!$user->isAdministrator() && $request->requester_id !== $user->id) {
+        if (!$user->hasPermissionTo('requests.view.all') && $request->requester_id !== $user->id) {
             return response()->json(['message' => 'Non autorisé'], 403);
         }
 
@@ -380,33 +500,129 @@ class RequestController extends Controller
     public function validate(ValidateRequestRequest $httpRequest, Request $request)
     {
         $data = $httpRequest->validated();
+        $user = auth()->user();
+        $requiresDualValidation = $request->requiresDualValidation();
+        
+        // Vérifier les permissions selon le type de validation
+        if ($requiresDualValidation) {
+            // Pour les demandes critical/emergency, vérifier les permissions
+            if ($user->canValidateLevel1() && !$user->canValidateLevel2()) {
+                // Validation niveau 1
+        $request->update([
+                    'validated_by_level1_id' => $user->id,
+                    'validated_at_level1' => now(),
+                    'validation_status_level1' => $data['validation_status'],
+                    'rejection_reason_level1' => $data['validation_status'] === 'rejected' ? ($data['rejection_reason'] ?? null) : null,
+                ]);
+                
+                AuditLog::log(
+                    'Request Validation Level 1 ' . ucfirst($data['validation_status']),
+                    $user,
+                    'Request',
+                    $request->id,
+                    [
+                        'title' => $request->title,
+                        'level' => 1,
+                        'rejection_reason' => $data['rejection_reason'] ?? null
+                    ]
+                );
+                
+                // Si rejetée au niveau 1, rejeter la demande complète
+                if ($data['validation_status'] === 'rejected') {
+                    $request->update(['status' => 'rejected']);
+                    $request->refresh();
+                    $this->sendValidationNotifications($request, 'rejected', $data['rejection_reason'] ?? null, 1);
+                    return response()->json($request->load(['requester', 'validatorLevel1', 'validatorLevel2', 'equipment.zone', 'sensor']));
+                }
+                
+                // Si approuvée au niveau 1, notifier les administrateurs pour validation niveau 2
+        if ($data['validation_status'] === 'approved') {
+                    $request->refresh();
+                    $this->sendLevel1ApprovalNotification($request);
+                }
+                
+            } elseif ($user->canValidateLevel2()) {
+                // Validation niveau 2 (administrator ou director)
+                // Vérifier que le niveau 1 est déjà approuvé
+                if ($request->validation_status_level1 !== 'approved') {
+                    return response()->json([
+                        'message' => 'La validation niveau 1 (supervisor) doit être approuvée avant la validation niveau 2'
+                    ], 422);
+                }
+                
+                $request->update([
+                    'validated_by_level2_id' => $user->id,
+                    'validated_at_level2' => now(),
+                    'validation_status_level2' => $data['validation_status'],
+                    'rejection_reason_level2' => $data['validation_status'] === 'rejected' ? ($data['rejection_reason'] ?? null) : null,
+                ]);
+                
+                AuditLog::log(
+                    'Request Validation Level 2 ' . ucfirst($data['validation_status']),
+                    $user,
+                    'Request',
+                    $request->id,
+                    [
+                        'title' => $request->title,
+                        'level' => 2,
+                        'rejection_reason' => $data['rejection_reason'] ?? null
+                    ]
+                );
+                
+                // Si rejetée au niveau 2, rejeter la demande complète
+                if ($data['validation_status'] === 'rejected') {
+                    $request->update(['status' => 'rejected']);
+                    $request->refresh();
+                    $this->sendValidationNotifications($request, 'rejected', $data['rejection_reason'] ?? null, 2);
+                    return response()->json($request->load(['requester', 'validatorLevel1', 'validatorLevel2', 'equipment.zone', 'sensor']));
+                }
+                
+                // Si approuvée au niveau 2, approuver la demande et désactiver le capteur
+                if ($data['validation_status'] === 'approved') {
+                    $request->update([
+                        'status' => 'approved',
+                        'validated_by_id' => $user->id,
+                        'validated_at' => now(),
+                    ]);
+                    
+                    // Désactiver le capteur uniquement maintenant que les deux validations sont approuvées
+            $sensor = $request->sensor;
+            $equipement = $request->equipment;
+            if ($sensor) {
+                $sensor->update(['status' => 'bypassed']);
+                $equipement->update(['status' => 'maintenance']);
+                
+                AuditLog::log(
+                    'Sensor Deactivated and Equipment deactivated',
+                            $user,
+                    'Sensor/Equipment',
+                    $sensor->id,
+                            ['reason' => 'Bypass request approved (dual validation)', 'request_id' => $request->id]
+                        );
+                    }
+                    
+                    $request->refresh();
+                    $this->sendValidationNotifications($request, 'approved', null, 2);
+                }
+            } else {
+                return response()->json(['message' => 'Non autorisé à valider cette demande'], 403);
+            }
+        } else {
+            // Pour les demandes normales (low, normal, high), validation simple
+            if (!$user->canValidateRequests()) {
+                return response()->json(['message' => 'Non autorisé à valider'], 403);
+            }
         
         $request->update([
             'status' => $data['validation_status'],
-            'validated_by_id' => auth()->id(),
+                'validated_by_id' => $user->id,
             'validated_at' => now(),
             'rejection_reason' => $data['rejection_reason'] ?? null,
         ]);
-
-        // Si la requête est approuvée, désactiver le capteur
-        if ($data['validation_status'] === 'approved') {
-            $sensor = $request->sensor;
-            if ($sensor) {
-                $sensor->update(['status' => 'inactive']);
-                
-                AuditLog::log(
-                    'Sensor Deactivated',
-                    auth()->user(),
-                    'Sensor',
-                    $sensor->id,
-                    ['reason' => 'Bypass request approved', 'request_id' => $request->id]
-                );
-            }
-        }
         
         AuditLog::log(
             'Request ' . ucfirst($data['validation_status']),
-            auth()->user(),
+                $user,
             'Request',
             $request->id,
             [
@@ -415,34 +631,138 @@ class RequestController extends Controller
             ]
         );
 
-        // Charger les relations nécessaires
-        $request->load(['requester', 'validator', 'equipment.zone', 'sensor']);
-
-        // Préparer les messages
-        $status = ucfirst($data['validation_status']); // Approved ou Rejected
-        $requesterMessage = "📌 *Notification : Requête {$status}*\n" .
-                            "📝 Titre : {$request->title}\n" .
-                            "⚡ Statut : {$status}\n" .
-                            ($status === 'Rejected' ? "❌ Raison du rejet : {$data['rejection_reason']}\n" : "") .
-                            "📅 Validée le : " . now()->format('d/m/Y H:i') . "\n";
-
-        $directorMessage = "📌 *Notification : Requête {$status}*\n" .
-                        "👤 Demandeur : {$request->requester->full_name}\n" .
-                        "📝 Titre : {$request->title}\n" .
-                        "⚡ Statut : {$status}\n" .
-                        ($status === 'Rejected' ? "❌ Raison du rejet : {$data['rejection_reason']}\n" : "") .
-                        "📅 Validée le : " . now()->format('d/m/Y H:i') . "\n";
-
-        // Envoyer un message au demandeur
-        $this->sendTextMessage(ltrim($request->requester->phone, '+'), $requesterMessage);
-
-        // Envoyer un message aux directeurs (administrateurs)
-        $directors = User::where('role', 'administrator')->get();
-        foreach ($directors as $director) {
-            $this->sendTextMessage(ltrim($director->phone, '+'), $directorMessage);
+        // Si la requête est approuvée, désactiver le capteur
+        if ($data['validation_status'] === 'approved') {
+            $sensor = $request->sensor;
+            $equipement = $request->equipment;
+            if ($sensor) {
+                $sensor->update(['status' => 'bypassed']);
+                $equipement->update(['status' => 'maintenance']);
+                
+                AuditLog::log(
+                    'Sensor Deactivated and Equipment deactivated',
+                    $user,
+                    'Sensor',
+                    $sensor->id,
+                    ['reason' => 'Bypass request approved', 'request_id' => $request->id]
+                );
+            }
+        }
+        
+        $request->refresh();
+        $this->sendValidationNotifications($request, $data['validation_status'], $data['rejection_reason'] ?? null, null);
         }
 
-        return response()->json($request->load(['requester', 'validator', 'equipment', 'sensor']));
+        return response()->json($request->load(['requester', 'validator', 'validatorLevel1', 'validatorLevel2', 'equipment.zone', 'sensor']));
+    }
+    
+    /**
+     * Envoie les notifications de validation
+     */
+    private function sendValidationNotifications(Request $request, string $status, ?string $rejectionReason = null, ?int $validationLevel = null): void
+    {
+        $request->load(['requester', 'validatorLevel1', 'validatorLevel2', 'equipment.zone', 'sensor']);
+        
+        $statusLabel = $status === 'approved' ? 'Approuvée' : 'Rejetée';
+        
+        // Envoyer une notification Laravel au demandeur (gestion d'erreur)
+        if ($request->requester) {
+            try {
+                Notification::send($request->requester, new RequestValidated($request, $status, $rejectionReason, $validationLevel));
+            } catch (\Exception $e) {
+                Log::warning('Erreur envoi notification validation au demandeur: ' . $e->getMessage());
+                // Essayer au moins en base de données
+                try {
+                    $request->requester->notify(new RequestValidated($request, $status, $rejectionReason, $validationLevel));
+                } catch (\Exception $e2) {
+                    Log::error('Erreur critique notification DB: ' . $e2->getMessage());
+                }
+            }
+        }
+        
+        $requesterMessage = "📌 *Notification : Requête {$statusLabel}*\n" .
+                            "📝 Titre : {$this->getReasonLabel($request->title)}\n" .
+                            "⚡ Statut : {$statusLabel}\n" .
+                            ($status === 'rejected' && $rejectionReason ? "❌ Raison du rejet : {$rejectionReason}\n" : "") .
+                            "📅 Validée le : " . now()->format('d/m/Y H:i') . "\n";
+
+        $directorMessage = "📌 *Notification : Requête {$statusLabel}*\n" .
+                        "👤 Demandeur : {$request->requester->full_name}\n" .
+                        "📝 Titre : {$this->getReasonLabel($request->title)}\n" .
+                        "⚡ Statut : {$statusLabel}\n" .
+                        ($status === 'rejected' && $rejectionReason ? "❌ Raison du rejet : {$rejectionReason}\n" : "") .
+                        "📅 Validée le : " . now()->format('d/m/Y H:i') . "\n";
+
+        // Envoyer un message WhatsApp au demandeur (gestion d'erreur)
+        if ($request->requester && $request->requester->phone) {
+            try {
+        $this->sendTextMessage(ltrim($request->requester->phone, '+'), $requesterMessage);
+            } catch (\Exception $e) {
+                Log::warning('Erreur envoi WhatsApp validation au demandeur: ' . $e->getMessage());
+            }
+        }
+
+        // Envoyer un message WhatsApp aux directeurs (administrateurs) (gestion d'erreur)
+        $directors = User::role('administrator')->get();
+        foreach ($directors as $director) {
+            if ($director->phone) {
+                try {
+            $this->sendTextMessage(ltrim($director->phone, '+'), $directorMessage);
+                } catch (\Exception $e) {
+                    Log::warning("Erreur envoi WhatsApp validation à {$director->full_name}: " . $e->getMessage());
+                }
+            }
+        }
+    }
+    
+    /**
+     * Envoie une notification aux administrateurs pour validation niveau 2
+     */
+    private function sendLevel1ApprovalNotification(Request $request): void
+    {
+        $request->load(['requester', 'validatorLevel1', 'equipment.zone', 'sensor']);
+        
+        // Envoyer des notifications Laravel aux administrateurs (gestion d'erreur)
+        $administrators = User::permission('requests.validate.level2')->get();
+        if ($administrators->isNotEmpty()) {
+            try {
+                Notification::send($administrators, new RequestLevel1Approved($request));
+            } catch (\Exception $e) {
+                Log::warning('Erreur envoi notification niveau 1 approuvée: ' . $e->getMessage());
+                // Essayer au moins en base de données
+                try {
+                    foreach ($administrators as $admin) {
+                        $admin->notify(new RequestLevel1Approved($request));
+                    }
+                } catch (\Exception $e2) {
+                    Log::error('Erreur critique notification DB niveau 1: ' . $e2->getMessage());
+                }
+            }
+        }
+        
+        $message = "📌 *Validation Niveau 1 Approuvée - Validation Niveau 2 Requise*\n" .
+                   "👤 Demandeur : {$request->requester->full_name}\n" .
+                   "📝 Titre : {$this->getReasonLabel($request->title)}\n" .
+                   "⚡ Priorité : {$this->getUrgencyLabel($request->priority)}\n" .
+                   "✅ Validée niveau 1 par : {$request->validatorLevel1->full_name}\n" .
+                   "⏳ En attente de votre validation niveau 2.\n" .
+                   "📂 Consultez la demande dans le système pour plus de détails.";
+        
+        $quickReplies = [
+            ['id' => 'web', 'title' => '🌐 Valider maintenant', 'type' => 'url', 'url' => env('APP_URL').'/validation']
+        ];
+        
+        // Envoyer des messages WhatsApp aux administrateurs (gestion d'erreur)
+        foreach ($administrators as $admin) {
+            if ($admin->phone) {
+                try {
+                    $adminPhone = ltrim($admin->phone, '+');
+                    $this->sendInteractiveMediaMessages($adminPhone, $message, $quickReplies);
+                } catch (\Exception $e) {
+                    Log::warning("Erreur envoi WhatsApp niveau 1 à {$admin->full_name}: " . $e->getMessage());
+                }
+            }
+        }
     }
 
     #[OA\Get(
@@ -506,18 +826,59 @@ class RequestController extends Controller
             return response()->json(['message' => 'Non autorisé'], 403);
         }
 
-        $requests = Request::with(['requester', 'equipment.zone', 'sensor', 'validator'])
-                          ->pending()
-                          ->where(function($query) {
                               $user = auth()->user();
-                              if ($user->role === 'supervisor') {
-                                  $query->where('validation_required_by_role', 'supervisor');
-                              } elseif ($user->role === 'administrator') {
-                                  $query->whereIn('validation_required_by_role', ['supervisor', 'administrator']);
-                              }
-                          })
-                          ->orderBy('created_at', 'asc')
-                          ->paginate(15);
+        
+        $query = Request::with(['requester', 'equipment.zone', 'sensor', 'validator', 'validatorLevel1', 'validatorLevel2'])
+                       ->where('status', 'pending'); // Demandes non encore approuvées/rejetées
+        
+        if ($user->canValidateLevel1() && !$user->canValidateLevel2()) {
+            // Supervisors voient les demandes normales OU les demandes critical/emergency en attente niveau 1
+            $query->where(function($q) {
+                // Demandes normales (low, normal, high) qui nécessitent validation supervisor
+                $q->where(function($subQ) {
+                    $subQ->whereIn('priority', ['low', 'normal', 'high'])
+                         ->where(function($roleQ) {
+                             $roleQ->where('validation_required_by_role', 'supervisor')
+                                   ->orWhereNull('validation_required_by_role'); // Gérer les anciennes demandes
+                         });
+                })
+                // OU demandes critical/emergency en attente niveau 1
+                ->orWhere(function($subQ) {
+                    $subQ->whereIn('priority', ['critical', 'emergency'])
+                         ->where(function($statusQ) {
+                             $statusQ->where('validation_status_level1', 'pending')
+                                     ->orWhereNull('validation_status_level1'); // Gérer les anciennes demandes
+                         });
+                });
+            });
+        } elseif ($user->canValidateLevel2()) {
+            // Administrators/Directors voient TOUTES les demandes en attente
+            // Ils peuvent valider à la fois niveau 1 et niveau 2
+            $query->where(function($q) {
+                // Demandes normales (low, normal, high) - les admins peuvent toutes les valider
+                $q->whereIn('priority', ['low', 'normal', 'high'])
+                // OU demandes critical/emergency en attente niveau 2 (niveau 1 déjà approuvé)
+                ->orWhere(function($subQ) {
+                    $subQ->whereIn('priority', ['critical', 'emergency'])
+                         ->where('validation_status_level1', 'approved')
+                         ->where(function($statusQ) {
+                             $statusQ->where('validation_status_level2', 'pending')
+                                     ->orWhereNull('validation_status_level2');
+                         });
+                })
+                // OU demandes critical/emergency en attente niveau 1 (si pas encore validé)
+                ->orWhere(function($subQ) {
+                    $subQ->whereIn('priority', ['critical', 'emergency'])
+                         ->where(function($statusQ) {
+                             $statusQ->where('validation_status_level1', 'pending')
+                                     ->orWhereNull('validation_status_level1');
+                         });
+                });
+            });
+        }
+        
+        $requests = $query->orderBy('created_at', 'desc')->get();
+
 
         return response()->json($requests);
     }
@@ -564,7 +925,7 @@ class RequestController extends Controller
         $user = auth()->user();
         
         // Seul le demandeur ou un admin peut modifier
-        if (!$user->isAdministrator() && $request->requester_id !== $user->id) {
+        if (!$user->hasPermissionTo('requests.view.all') && $request->requester_id !== $user->id) {
             return response()->json(['message' => 'Non autorisé'], 403);
         }
 
@@ -589,6 +950,48 @@ class RequestController extends Controller
             'equipment_id', 'sensor_id', 'start_time', 'end_time'
         ]));
 
+        // Recharger la demande avec les relations
+        $request->refresh();
+        $request->load(['requester', 'equipment.zone', 'sensor']);
+
+        // Notifier les validateurs que la demande a été modifiée (gestion d'erreur)
+        $validators = User::permission('requests.validate.level1')->get();
+        if ($validators->isNotEmpty()) {
+            try {
+                Notification::send($validators, new RequestUpdate($request));
+            } catch (\Exception $e) {
+                Log::warning('Erreur envoi notification modification: ' . $e->getMessage());
+                // Essayer au moins en base de données
+                try {
+                    foreach ($validators as $validator) {
+                        $validator->notify(new RequestUpdate($request));
+                    }
+                } catch (\Exception $e2) {
+                    Log::error('Erreur critique notification DB modification: ' . $e2->getMessage());
+                }
+            }
+        }
+
+        // Envoyer un message WhatsApp aux validateurs (gestion d'erreur)
+        $updateMessage = "📌 *Demande Modifiée*\n" .
+           "👤 Demandeur : {$request->requester->full_name}\n" .
+           "📝 Code : {$request->request_code}\n" .
+           "📝 Titre : {$this->getReasonLabel($request->title)}\n" .
+           "⚡ Priorité : {$this->getUrgencyLabel($request->priority)}\n" .
+           "📅 Modifiée le : " . now()->format('d/m/Y H:i') . "\n" .
+           "🔍 Statut : En attente de validation.";
+
+        foreach ($validators as $validator) {
+            if ($validator->phone) {
+                try {
+                    $validatorPhone = ltrim($validator->phone, '+');
+                    $this->sendTextMessage($validatorPhone, $updateMessage);
+                } catch (\Exception $e) {
+                    Log::warning("Erreur envoi WhatsApp modification à {$validator->full_name}: " . $e->getMessage());
+                }
+            }
+        }
+
         AuditLog::log(
             'Request Updated',
             auth()->user(),
@@ -597,7 +1000,7 @@ class RequestController extends Controller
             ['title' => $request->title]
         );
 
-        return response()->json($request->load(['equipment', 'sensor']));
+        return response()->json($request->load(['equipment', 'sensor', 'requester']));
     }
 
     #[OA\Delete(
@@ -631,7 +1034,7 @@ class RequestController extends Controller
         $user = auth()->user();
         
         // Seul le demandeur ou un admin peut supprimer
-        if (!$user->isAdministrator() && $request->requester_id !== $user->id) {
+        if (!$user->hasPermissionTo('requests.view.all') && $request->requester_id !== $user->id) {
             return response()->json(['message' => 'Non autorisé'], 403);
         }
 

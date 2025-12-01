@@ -222,13 +222,13 @@ const Notifications = () => {
                     <div className="flex items-start gap-3 min-w-0 flex-1">
                       <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${isUnread ? "bg-primary" : "bg-transparent"}`} />
                       <div className="min-w-0 flex-1">
-                        <CardTitle className={`text-sm sm:text-base mb-1 ${isUnread ? "font-semibold text-foreground" : "text-muted-foreground font-normal"}`}>
+                        <CardTitle className={`text-sm sm:text-base mb-1 ${isUnread ? "font-semibold text-foreground" : "text-black font-normal"}`}>
                           {getMaintenanceLabel(notification.data.title)}
                         </CardTitle>
-                        <CardDescription className={`text-xs sm:text-sm mt-1 ${isUnread ? "text-foreground/80" : "text-muted-foreground"}`}>
+                        <CardDescription className={`text-xs sm:text-sm mt-1 ${isUnread ? "text-foreground/80" : "text-black"}`}>
                           {notification.data.description}
                         </CardDescription>
-                        <p className="text-xs text-muted-foreground mt-2">
+                        <p className="text-xs text-black mt-2">
                           {new Date(notification.created_at).toLocaleString('fr-FR', {
                             dateStyle: 'medium',
                             timeStyle: 'short',
@@ -241,7 +241,7 @@ const Notifications = () => {
                       className={`text-xs flex-shrink-0 ${
                         isUnread 
                           ? "bg-primary" 
-                          : "text-muted-foreground border-muted-foreground/30"
+                          : "text-black border-black/30"
                       }`}
                     >
                       {isUnread ? "Non lue" : "Lue"}

@@ -22,9 +22,9 @@ class AuthController extends Controller
             content: new OA\MediaType(
                 mediaType: "application/json",
                 schema: new OA\Schema(
-                    required: ["username", "password"],
+                    required: ["identifier", "password"],
                     properties: [
-                        new OA\Property(property: "username", type: "string", example: "admin"),
+                        new OA\Property(property: "identifier", type: "string", example: "admin ou admin@exemple.com"),
                         new OA\Property(property: "password", type: "string", format: "password", example: "password123"),
                     ]
                 )
@@ -58,26 +58,31 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'username' => 'required|string',
+            'identifier' => 'nullable|string',
+            'username' => 'nullable|string',
+            'email' => 'nullable|email',
             'password' => 'required|string',
         ]);
 
-        Log::info($request);
+        $identifier = $request->input('identifier')
+            ?? $request->input('username')
+            ?? $request->input('email');
 
-        $user = User::where('username', $request->username)
-                   ->where('is_active', true)
-                   ->first();
+        if (!$identifier) {
+            throw ValidationException::withMessages([
+                'identifier' => ['Veuillez fournir un email ou un nom d’utilisateur.'],
+            ]);
+        }
 
-        Log::info(message: $user);
+        $userQuery = User::where('is_active', true)
+            ->where(function ($query) use ($identifier) {
+                $query->where('username', $identifier)
+                      ->orWhere('email', $identifier);
+            });
 
-        
+        $user = $userQuery->first();
+
         if (!$user || !Hash::check($request->password, $user->password)) {
-            Log::info('dedans');
-            
-            // throw ValidationException::withMessages([
-            //     'username' => ['Les informations d\'identification fournies sont incorrectes.'],
-            // ]);
-
             return response()->json([
                 'status' => 200,
                 'data' => [],
@@ -86,16 +91,8 @@ class AuthController extends Controller
             
         }
         
-        if(!$user) {
-            throw ValidationException::withMessages([
-                'username' => ['Les informations d\'identification fournies sont incorrectes.'],
-            ]);
-        }
-
-        $token = $user->createToken('auth-token')->plainTextToken;
-
-        Log::info(message: $token);
-
+        // Créer un token sans expiration (gestion d'expiration côté frontend uniquement)
+        $token = $user->createToken('auth-token', ['*'])->plainTextToken;
 
         AuditLog::log('User Login', $user);
 
