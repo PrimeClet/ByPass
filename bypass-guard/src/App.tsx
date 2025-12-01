@@ -2,12 +2,19 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { TopNavbar } from "@/components/layout/TopNavbar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useDispatch, useSelector } from "react-redux";
+import { useCallback } from "react";
+import { logout } from "./store/users";
+import type { AppDispatch, RootState } from "./store/store";
+import { useToast } from "@/components/ui/use-toast";
+import api from "./axios";
+import { useInactivityLogout } from "./hooks/useInactivityLogout";
 import Dashboard from "./pages/Dashboard";
 import Requests from "./pages/Requests";
 import Validation from "./pages/Validation";
@@ -27,19 +34,46 @@ import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
-const Layout = ({ children }: { children: React.ReactNode }) => (
-  <SidebarProvider>
-    <div className="min-h-screen flex w-full bg-background">
-      <AppSidebar />
-      <div className="flex-1 flex flex-col">
-        <TopNavbar />
-        <main className="flex-1">
-          {children}
-        </main>
+const Layout = ({ children }: { children: React.ReactNode }) => {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+  const { user, token } = useSelector((state: RootState) => state.user);
+
+  const handleAutoLogout = useCallback(async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Auto logout error:', error);
+    } finally {
+      dispatch(logout());
+      toast({
+        title: 'Session expirée',
+        description: 'Vous avez été déconnecté après une période d’inactivité.',
+      });
+      navigate('/login');
+    }
+  }, [dispatch, navigate, toast]);
+
+  useInactivityLogout({
+    onTimeout: handleAutoLogout,
+    enabled: Boolean(user && token),
+  });
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col">
+          <TopNavbar />
+          <main className="flex-1">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
-  </SidebarProvider>
-);
+    </SidebarProvider>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

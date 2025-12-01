@@ -36,7 +36,7 @@ class ReactivateSensors extends Command
         $expiredRequests = Request::where('status', 'approved')
             ->where('end_time', '<', $now)
             ->whereHas('sensor', function($query) {
-                $query->where('status', 'inactive');
+                $query->where('status', 'bypassed');
             })
             ->with(['sensor', 'requester', 'equipment'])
             ->get();
@@ -46,8 +46,8 @@ class ReactivateSensors extends Command
             
             if ($sensor) {
                 // Préparer le message pour les approbateurs
-                $message = "⚠️ *Alerte : Réactivation de Capteur Requise*\n" .
-                          "📝 Requête : {$request->title}\n" .
+                $message = "⚠️ *Alerte : Réactivation de Capteur & Son Equipement associe Requise*\n" .
+                          "📝 Requête : {$this->getReasonLabel($request->title)}\n" .
                           "👤 Demandeur : {$request->requester->full_name}\n" .
                           "🔧 Équipement : {$request->equipment->name}\n" .
                           "📡 Capteur : {$sensor->name} (ID: {$sensor->id})\n" .
@@ -70,6 +70,22 @@ class ReactivateSensors extends Command
         }
 
         $this->info('Vérification des capteurs terminée.');
+    }
+
+    private function getReasonLabel(string $key): string
+    {
+        $reasonLabels = [
+            'preventive_maintenance' => 'Maintenance préventive',
+            'corrective_maintenance' => 'Maintenance corrective',
+            'calibration' => 'Étalonnage',
+            'testing' => 'Tests',
+            'emergency_repair' => 'Réparation d\'urgence',
+            'system_upgrade' => 'Mise à niveau système',
+            'investigation' => 'Investigation',
+            'other' => 'Autre'
+        ];
+
+        return $reasonLabels[$key] ?? $key;
     }
 
     private function sendWhatsAppMessage($to, $text)

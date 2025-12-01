@@ -203,20 +203,39 @@ export function AppSidebar() {
   ]
 
   useEffect(() => {
-    if(user.role !== 'user'){
-      api.get('/requests/pending')
-      .then(response => {
-        // Handle successful response
-        // console.log(response.data); // The fetched data is typically in response.data
-        setValidateValue(response.data.data.length)    
-      })
-      .catch(error => {
-        // Handle error
-        console.error('Error fetching data:', error);
-      });
-    }
+    // Fonction pour récupérer le nombre de demandes en attente
+    const fetchPendingCount = () => {
+      if(user && user.role !== 'user'){
+        api.get('/requests/pending')
+        .then(response => {
+          // Handle successful response
+          // La réponse peut être un tableau directement ou un objet paginé
+          let count = 0;
+          if (Array.isArray(response.data)) {
+            count = response.data.length;
+          } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+            count = response.data.data.length;
+          }
+          setValidateValue(count);
+        })
+        .catch(error => {
+          // Handle error
+          console.error('Error fetching pending requests count:', error);
+          setValidateValue(0);
+        });
+      } else {
+        setValidateValue(0);
+      }
+    };
 
-  }, [location.key])
+    // Récupérer immédiatement
+    fetchPendingCount();
+    
+    // Puis toutes les 30 secondes pour mettre à jour le compteur
+    const interval = setInterval(fetchPendingCount, 30000);
+    
+    return () => clearInterval(interval);
+  }, [location.key, user])
 
 
   const isActive = (path: string) => currentPath === path

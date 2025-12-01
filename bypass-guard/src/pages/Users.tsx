@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import api from '../axios';
 import { LogIn, Eye, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { PhoneInputField } from '@/components/ui/phone-input';
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -175,17 +176,32 @@ const Users: React.FC = () => {
   };
 
   const handleDeleteUser = (userId: string) => {
-    setUsers(users.filter(user => user.id !== userId));
-    toast.success('Utilisateur supprimé avec succès');
+    api.delete(`/users/${userId}`)
+      .then(() => {
+        getUsersList();
+        toast.success('Utilisateur supprimé avec succès');
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        toast.error(error.response?.data?.message || 'Erreur lors de la suppression de l\'utilisateur');
+      });
   };
 
   const toggleUserStatus = (userId: string) => {
-    setUsers(users.map(user => 
-      user.id === userId 
-        ? { ...user, isActive: !user.isActive }
-        : user
-    ));
-    toast.success('Statut utilisateur modifié');
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    api.put(`/users/${userId}`, {
+      is_active: !user.isActive
+    })
+      .then(() => {
+        getUsersList();
+        toast.success('Statut utilisateur modifié');
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        toast.error('Erreur lors de la modification du statut');
+      });
   };
 
   const getRoleBadgeVariant = (role: UserRole) => {
@@ -213,29 +229,30 @@ const Users: React.FC = () => {
       .then(response => {
         // Handle successful response
         const datas = response.data.data;
-        if (datas.length !== 0) {
-          const formattedEquips = datas.map(
-            (eqs: any, index: number) => ({
-              id: eqs.id,
-              full_name: eqs.full_name,
-              email: eqs.email,
-              role: eqs.role,
-              phone: eqs.phone,
-              username: eqs.username,
-              isActive: eqs.is_active == 1 ? true : false 
+        if (datas && datas.length !== 0) {
+          const formattedUsers = datas.map(
+            (user: any) => ({
+              id: user.id,
+              full_name: user.full_name,
+              email: user.email,
+              role: user.role,
+              phone: user.phone,
+              username: user.username,
+              isActive: user.is_active == 1 ? true : false,
+              spatie_roles: user.spatie_roles || [user.role] // Rôles Spatie
             })
           );
 
-          console.log(formattedEquips);
-
-          setUsers(formattedEquips);
+          setUsers(formattedUsers);
+        } else {
+          setUsers([]);
         }
         setIsLoading(false);
-        // setRequestActifList(response.data.data)    
       })
       .catch(error => {
         // Handle error
         console.error('Error fetching data:', error);
+        toast.error('Erreur lors du chargement des utilisateurs');
         setIsLoading(false);
       });
   };
@@ -429,10 +446,10 @@ const Users: React.FC = () => {
               <div className="grid grid-cols-1 gap-4 w-full min-w-0">
                 <div className="w-full min-w-0">
                   <Label htmlFor="phone">Téléphone</Label>
-                  <Input
+                  <PhoneInputField
                     id="phone"
                     value={newUser.phone}
-                    onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+                    onChange={(value) => setNewUser({...newUser, phone: value || ''})}
                     placeholder="Numéro de téléphone"
                     className="w-full min-w-0"
                   />
@@ -634,9 +651,13 @@ const Users: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between min-w-0 gap-2">
                     <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Rôle:</span>
-                    <Badge variant={getRoleBadgeVariant(user.role)} className="text-[10px] sm:text-xs flex-shrink-0 whitespace-nowrap">
-                      {getRoleLabel(user.role)}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1 flex-shrink-0">
+                      {(user.spatie_roles || [user.role]).map((role: string) => (
+                        <Badge key={role} variant={getRoleBadgeVariant(role as UserRole)} className="text-[10px] sm:text-xs whitespace-nowrap">
+                          {getRoleLabel(role as UserRole)}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                   <div className="flex items-center justify-between min-w-0 gap-2">
                     <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Téléphone:</span>
@@ -716,9 +737,13 @@ const Users: React.FC = () => {
                           <Badge variant="outline" className="text-[10px] sm:text-xs md:text-sm">{user.username || 'N/A'}</Badge>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
-                          <Badge variant={getRoleBadgeVariant(user.role)} className="text-[10px] sm:text-xs md:text-sm">
-                            {getRoleLabel(user.role)}
-                          </Badge>
+                          <div className="flex flex-wrap gap-1">
+                            {(user.spatie_roles || [user.role]).map((role: string) => (
+                              <Badge key={role} variant={getRoleBadgeVariant(role as UserRole)} className="text-[10px] sm:text-xs md:text-sm">
+                                {getRoleLabel(role as UserRole)}
+                              </Badge>
+                            ))}
+                          </div>
                         </TableCell>
                         <TableCell className="text-xs sm:text-sm truncate max-w-[100px] sm:max-w-[120px] min-w-0">{user.phone || 'N/A'}</TableCell>
                         <TableCell className="whitespace-nowrap">

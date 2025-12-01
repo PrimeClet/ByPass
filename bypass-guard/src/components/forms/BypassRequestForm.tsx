@@ -35,7 +35,7 @@ const requestSchema = z.object({
   operationalImpact: z.enum(['very_low', 'low', 'medium', 'high', 'very_high']),
   environmentalImpact: z.enum(['very_low', 'low', 'medium', 'high', 'very_high']),
   mitigationMeasures: z.array(z.string()).min(1, 'Au moins une mesure d\'atténuation requise'),
-  contingencyPlan: z.string().optional(),
+  contingencyPlan: z.string().optional().transform(val => val === '' ? undefined : val),
   acknowledgeSafety: z.boolean().refine(val => val === true, 'Vous devez accepter les conditions de sécurité'),
   acknowledgeResponsibility: z.boolean().refine(val => val === true, 'Vous devez accepter la responsabilité')
 });
@@ -205,10 +205,17 @@ export const BypassRequestForm = () => {
 
   const onSubmit = async (data: RequestFormData) => {
     try {
+      // Transformer les chaînes vides en null pour les champs optionnels
+      const submitData = {
+        ...data,
+        contingencyPlan: data.contingencyPlan && data.contingencyPlan.trim() !== '' ? data.contingencyPlan : null,
+        maintenanceWorkOrder: data.maintenanceWorkOrder && data.maintenanceWorkOrder.trim() !== '' ? data.maintenanceWorkOrder : null,
+      };
+      
       await api({
         method: 'post',
         url: `/requests`,
-        data: data
+        data: submitData
       });
       toast.success("Demande de Bypass Soumis avec Succes");
       reset();
@@ -315,7 +322,7 @@ export const BypassRequestForm = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {availableEquipment.map(equipment => (
-                      <SelectItem key={equipment.id} value={equipment.id}>
+                      <SelectItem key={equipment.id} value={equipment.id} disabled={equipment.status !== 'operational'}>
                         <div className="flex items-center space-x-2">
                           <span>{equipment.name}</span>
                           <Badge variant="outline">{equipment.code}</Badge>
@@ -368,7 +375,7 @@ export const BypassRequestForm = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {availableSensors.map(sensor => (
-                    <SelectItem key={sensor.id} value={sensor.id}>
+                    <SelectItem key={sensor.id} value={sensor.id} disabled={sensor.status !== 'active'}>
                       <div className="flex items-center space-x-2">
                         <span>{sensor.name}</span>
                         <Badge variant="outline">{sensor.code}</Badge>

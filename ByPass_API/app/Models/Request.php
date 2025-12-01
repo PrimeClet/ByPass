@@ -16,6 +16,8 @@ class Request extends Model
     protected $casts = [
         'submitted_at' => 'datetime',
         'validated_at' => 'datetime',
+        'validated_at_level1' => 'datetime',
+        'validated_at_level2' => 'datetime',
         'start_time' => 'datetime',
         'end_time' => 'datetime',
     ];
@@ -39,6 +41,16 @@ class Request extends Model
     public function validator()
     {
         return $this->belongsTo(User::class, 'validated_by_id');
+    }
+
+    public function validatorLevel1()
+    {
+        return $this->belongsTo(User::class, 'validated_by_level1_id');
+    }
+
+    public function validatorLevel2()
+    {
+        return $this->belongsTo(User::class, 'validated_by_level2_id');
     }
 
     public function equipment()
@@ -70,6 +82,40 @@ class Request extends Model
     public function scopeActive($query)
     {
         return $query->whereIn('status', ['in_progress', 'approved']);
+    }
+
+    /**
+     * Vérifie si la demande nécessite une double validation
+     */
+    public function requiresDualValidation(): bool
+    {
+        return in_array($this->priority, ['critical', 'emergency']);
+    }
+
+    /**
+     * Vérifie si les deux validations sont approuvées
+     */
+    public function hasBothApprovals(): bool
+    {
+        if (!$this->requiresDualValidation()) {
+            return $this->status === 'approved';
+        }
+
+        return $this->validation_status_level1 === 'approved' 
+            && $this->validation_status_level2 === 'approved';
+    }
+
+    /**
+     * Vérifie si une validation a été rejetée
+     */
+    public function hasRejection(): bool
+    {
+        if (!$this->requiresDualValidation()) {
+            return $this->status === 'rejected';
+        }
+
+        return $this->validation_status_level1 === 'rejected' 
+            || $this->validation_status_level2 === 'rejected';
     }
 
     private static function generateRequestCode(): string

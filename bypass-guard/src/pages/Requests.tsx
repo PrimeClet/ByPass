@@ -89,7 +89,7 @@ export default function Requests() {
   const { users, loading, error, user } = useSelector((state: RootState) => state.user);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(3);
-  const [activeTab, setActiveTab] = useState(user.role !== 'user' ? "mine" : "mine");
+  const [activeTab, setActiveTab] = useState(user?.role !== 'user' ? "mine" : "mine");
   
   // Fonction pour obtenir l'état de chargement selon l'onglet actif
   const isLoading = () => {
@@ -109,10 +109,10 @@ export default function Requests() {
   // Déterminer quelle vue afficher selon l'URL
   const isNewRequest = location.pathname === '/requests/new'
 
-  const filteredRequests = requestList.filter(request => {
-    const matchesSearch = request.equipment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.sensor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.request_code.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredRequests = (requestList ?? []).filter(request => {
+    const matchesSearch = (request.equipment?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (request.sensor?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (request.request_code || '').toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || request.status === statusFilter
     const matchesPriority = priorityFilter === "all" || request.priority === priorityFilter
     
@@ -120,9 +120,9 @@ export default function Requests() {
   })
 
   const filteredDemand = (requestDemand ?? []).filter(request => {
-    const matchesSearch = request.equipment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.sensor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.request_code.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = (request.equipment?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (request.sensor?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (request.request_code || '').toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || request.status === statusFilter
     const matchesPriority = priorityFilter === "all" || request.priority === priorityFilter
     
@@ -130,9 +130,9 @@ export default function Requests() {
   })
 
   const filteredApprobation = (requestApprobation ?? []).filter(request => {
-    const matchesSearch = request.equipment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.sensor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.request_code.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = (request.equipment?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (request.sensor?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (request.request_code || '').toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || request.status === statusFilter
     const matchesPriority = priorityFilter === "all" || request.priority === priorityFilter
     
@@ -140,9 +140,9 @@ export default function Requests() {
   })
 
   const filteredActifs = (requestActifs ?? []).filter(request => {
-    const matchesSearch = request.equipment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.sensor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.request_code.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = (request.equipment?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (request.sensor?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (request.request_code || '').toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || request.status === statusFilter
     const matchesPriority = priorityFilter === "all" || request.priority === priorityFilter
     
@@ -182,14 +182,20 @@ export default function Requests() {
 
   useEffect(() => {
     
-    if(user.role === 'administrator'){
+    if(user && user.role === 'administrator'){
         // Pour l'administrateur, récupérer toutes les demandes du système
         setIsLoadingAll(true);
         api.get('/requests')
         .then(response => {
           // Handle successful response
-          // L'API retourne une pagination : {data: [...], ...}
-          setRequestList(response.data.data || response.data);
+          // La réponse peut être un tableau directement ou un objet paginé
+          if (Array.isArray(response.data)) {
+            setRequestList(response.data);
+          } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+            setRequestList(response.data.data);
+          } else {
+            setRequestList([]);
+          }
           setIsLoadingAll(false);
         })
         .catch(error => {
@@ -199,13 +205,19 @@ export default function Requests() {
         });
     }
 
-    if(user.role === 'administrator' || user.role === 'supervisor'){
+    if(user && (user.role === 'administrator' || user.role === 'supervisor')){
         setIsLoadingPending(true);
         api.get('/requests/pending')
         .then(response => {
           // Handle successful response
-          // console.log(response.data); // The fetched data is typically in response.data
-          setRequestApprobationList(response.data.data);
+          // La réponse peut être un tableau directement ou un objet paginé
+          if (Array.isArray(response.data)) {
+            setRequestApprobationList(response.data);
+          } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+            setRequestApprobationList(response.data.data);
+          } else {
+            setRequestApprobationList([]);
+          }
           setIsLoadingPending(false);
         })
         .catch(error => {
@@ -218,8 +230,14 @@ export default function Requests() {
         api.get('/requests/active')
         .then(response => {
           // Handle successful response
-          // console.log(response.data); // The fetched data is typically in response.data
-          setRequestActifList(response.data.data);
+          // La réponse peut être un tableau directement ou un objet paginé
+          if (Array.isArray(response.data)) {
+            setRequestActifList(response.data);
+          } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+            setRequestActifList(response.data.data);
+          } else {
+            setRequestActifList([]);
+          }
           setIsLoadingActive(false);
         })
         .catch(error => {
@@ -233,13 +251,20 @@ export default function Requests() {
     api.get('/requests/mine')
     .then(response => {
       // Handle successful response
-      // console.log(response.data); // The fetched data is typically in response.data
-      setRequestDemandList(response.data.data);
+      // La réponse peut être un tableau directement ou un objet paginé
+      if (Array.isArray(response.data)) {
+        setRequestDemandList(response.data);
+      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        setRequestDemandList(response.data.data);
+      } else {
+        setRequestDemandList([]);
+      }
       setIsLoadingMine(false);
     })
     .catch(error => {
       // Handle error
       console.error('Error fetching data:', error);
+      setRequestDemandList([]);
       setIsLoadingMine(false);
     });
     
@@ -366,7 +391,7 @@ export default function Requests() {
       {/* Onglets de navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full min-w-0">
         <TabsList className="flex flex-row w-full h-auto gap-2 flex-wrap justify-between">
-          {(user.role === "administrator") && (
+          {(user?.role === "administrator") && (
             <TabsTrigger value="all" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 truncate flex-1 min-w-0">
               Toutes les demandes
             </TabsTrigger>
@@ -374,7 +399,7 @@ export default function Requests() {
           <TabsTrigger value="mine" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 truncate flex-1 min-w-0">
             Mes demandes
           </TabsTrigger>
-          {(user.role === "administrator" || user.role === "supervisor") && (
+          {(user?.role === "administrator" || user?.role === "supervisor") && (
             <>
               <TabsTrigger value="pending" onClick={resetFilter} className="text-xs sm:text-sm py-2 px-2 sm:px-4 truncate flex-1 min-w-0">
                 <span className="truncate">En attente</span>
@@ -387,7 +412,7 @@ export default function Requests() {
           
         </TabsList>
 
-        {(user.role === "administrator") && (
+        {(user?.role === "administrator") && (
           <TabsContent value="all" className="space-y-4 sm:space-y-6">
             {/* Filters */}
             <Card className="w-full box-border">
@@ -1025,7 +1050,7 @@ export default function Requests() {
             )}
         </TabsContent>
 
-        {(user.role === "administrator" || user.role === "supervisor") && (
+        {(user?.role === "administrator" || user?.role === "supervisor") && (
           <>
             <TabsContent value="pending" className="space-y-4 sm:space-y-6">
               

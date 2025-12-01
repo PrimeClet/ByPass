@@ -27,6 +27,8 @@ import { useState, useEffect } from "react"
 import { set, string } from "zod"
 import { toast } from 'sonner';
 import { useNavigate } from "react-router-dom"
+import { useSelector } from 'react-redux';
+import { RootState } from '../store/store';
 
 
 const pendingRequests = [
@@ -65,7 +67,7 @@ const pendingRequests = [
 export default function Validation() {
 
   const location = useLocation()
-  const [requestApprobation, setRequestApprobationList] = useState([]);
+  const [requestApprobation, setRequestApprobation] = useState([]);
   const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -73,6 +75,47 @@ export default function Validation() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useSelector((state: RootState) => state.user);
+  
+  // Vérifier si une demande nécessite une double validation
+  const requiresDualValidation = (priority: string) => {
+    return priority === 'critical' || priority === 'emergency';
+  };
+  
+  // Vérifier si l'utilisateur peut valider niveau 1
+  const canValidateLevel1 = () => {
+    return user?.role === 'supervisor' || user?.role === 'administrator' || user?.role === 'director';
+  };
+  
+  // Vérifier si l'utilisateur peut valider niveau 2
+  const canValidateLevel2 = () => {
+    return user?.role === 'administrator' || user?.role === 'director';
+  };
+  
+  // Déterminer quel niveau de validation l'utilisateur peut faire pour une demande
+  const getValidationLevel = (request: any) => {
+    if (!requiresDualValidation(request.priority)) {
+      // Pour les demandes normales, validation simple
+      return canValidateLevel1() ? 1 : null;
+    }
+    
+    // Pour les demandes critical/emergency
+    if (request.validation_status_level1 === 'pending' && canValidateLevel1() && !canValidateLevel2()) {
+      return 1; // Supervisor peut valider niveau 1
+    }
+    
+    if (request.validation_status_level1 === 'approved' && request.validation_status_level2 === 'pending' && canValidateLevel2()) {
+      return 2; // Administrator/Director peut valider niveau 2
+    }
+    
+    // Si l'utilisateur est admin/director et que le niveau 1 n'est pas encore validé, il peut aussi valider niveau 1
+    if (request.validation_status_level1 === 'pending' && canValidateLevel2()) {
+      return 1;
+    }
+    
+    return null;
+  };
 
   const setRejectionReason = (requestId: string, reason: string) => {
     setRejectionReasons(prev => ({ ...prev, [requestId]: reason }));
@@ -97,32 +140,69 @@ export default function Validation() {
     return reasonLabels[key] ?? key; // si pas trouvé, on retourne la clé brute
   }
 
-  const acceptedRequest = (id: string, data : any, reason: string = '') => {
+  const acceptedRequest = (id: string, data : any, reason: string = '', request?: any) => {
     // Simulate API call
     try {
+      const validationStatus = data.validation_status || 'approved';
       const rejectionReason = reason || data.rejection_reason || '';
-      if(rejectionReason === ''){
-        toast.error("Veuillez entrer un motif, au cas contraire - RAS");
-      } else {
-        api({
-          method: 'put',
-          url: `/requests/${id}/validate`,
-          data: { ...data, rejection_reason: rejectionReason }
-        })
-        .then(data => {
-          if (data) {
-            toast.success("Demande de Bypass Soumis avec Succes");
-            setRejectionReason(id, '');
-            navigate('/requests/mine')
-          } else {
-            toast.error("Probleme de connexion");
-          }
-        })
-        setRejectionReason(id, '');
+      
+      // Vérifier la raison uniquement si le statut est "rejected"
+      if(validationStatus === 'rejected' && rejectionReason === ''){
+        toast.error("Veuillez entrer un motif de rejet");
+        return;
       }
+      
+      // Vérifier si l'utilisateur peut valider cette demande
+      if (request) {
+        const validationLevel = getValidationLevel(request);
+        if (validationLevel === null) {
+          toast.error("Vous n'êtes pas autorisé à valider cette demande");
+          return;
+        }
+        
+        // Pour les demandes critical/emergency, vérifier que le niveau précédent est validé
+        if (requiresDualValidation(request.priority)) {
+          if (validationLevel === 2 && request.validation_status_level1 !== 'approved') {
+            toast.error("La validation niveau 1 doit être approuvée avant la validation niveau 2");
+            return;
+          }
+        }
+      }
+      
+      // Préparer les données à envoyer
+      const requestData: any = { ...data };
+      // Inclure rejection_reason seulement si le statut est rejected
+      if (validationStatus === 'rejected') {
+        requestData.rejection_reason = rejectionReason;
+      } else {
+        // Pour approved, ne pas envoyer rejection_reason ou l'envoyer vide
+        requestData.rejection_reason = null;
+      }
+      
+      api({
+        method: 'put',
+        url: `/requests/${id}/validate`,
+        data: requestData
+      })
+      .then(response => {
+        if (response.data) {
+          toast.success(validationStatus === 'approved' ? "Demande approuvée avec succès" : "Demande rejetée");
+          setRejectionReason(id, '');
+          // Recharger la liste des demandes
+          window.location.reload();
+        } else {
+          toast.error("Problème de connexion");
+        }
+      })
+      .catch(error => {
+        console.error('Erreur lors de la validation:', error);
+        toast.error(error.response?.data?.message || "Erreur lors de la validation");
+      });
+      setRejectionReason(id, '');
      
    } catch (error) {
      console.error('Erreur lors de la soumission:', error);
+     toast.error("Une erreur est survenue");
    }
  }
 
@@ -181,22 +261,49 @@ export default function Validation() {
   }
 
   useEffect(() => {
-    setIsLoading(true);
-    api.get('/requests/pending')
-    .then(response => {
-      // Handle successful response
-      // console.log(response.data); // The fetched data is typically in response.data
-      setRequestApprobationList(response.data.data);
-      setIsLoading(false);
-    })
-    .catch(error => {
-      // Handle error
-      console.error('Error fetching data:', error);
-      setIsLoading(false);
-    });
-    
+    const fetchPendingRequests = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        console.log('Fetching pending requests...');
+        const response = await api.get('/requests/pending');
+        console.log('Pending requests response:', response);
+        console.log('Response data:', response.data);
+        
+        // Laravel paginate retourne { data: [...], current_page: 1, ... }
+        if (response.data && response.data.data && Array.isArray(response.data.data)) {
+          console.log('Setting requests from response.data.data:', response.data.data.length);
+          setRequestApprobation(response.data.data);
+        } else if (Array.isArray(response.data)) {
+          // Si la réponse est directement un tableau
+          console.log('Setting requests from response.data (array):', response.data.length);
+          setRequestApprobation(response.data);
+        } else {
+          console.warn('Unexpected response format:', response.data);
+          setRequestApprobation([]);
+          setError('Format de réponse inattendu du serveur');
+          toast.error('Format de réponse inattendu du serveur');
+        }
+      } catch (error: any) {
+        // Handle error
+        console.error('Error fetching pending requests:', error);
+        console.error('Error response:', error.response);
+        const errorMessage = error.response?.data?.message || error.message || 'Erreur lors du chargement des demandes en attente';
+        setError(errorMessage);
+        toast.error(errorMessage);
+        setRequestApprobation([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  }, [location.key])
+    if (user) {
+      fetchPendingRequests();
+    } else {
+      console.warn('No user found, skipping fetch');
+      setIsLoading(false);
+    }
+  }, [location.key, user])
 
   // Calcul de la pagination
   const totalPages = Math.ceil(requestApprobation.length / itemsPerPage);
@@ -351,6 +458,41 @@ export default function Validation() {
             ))}
           </div>
         </>
+      ) : error ? (
+        <Card className="w-full box-border">
+          <CardContent className="text-center py-6 sm:py-8">
+            <XCircle className="w-10 h-10 sm:w-12 sm:h-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-sm sm:text-base font-semibold mb-2">Erreur de chargement</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-4">
+              {error}
+            </p>
+            <Button onClick={() => {
+              setError(null);
+              setIsLoading(true);
+              const fetchPendingRequests = async () => {
+                try {
+                  const response = await api.get('/requests/pending');
+                  if (response.data && response.data.data && Array.isArray(response.data.data)) {
+                    setRequestApprobation(response.data.data);
+                  } else if (Array.isArray(response.data)) {
+                    setRequestApprobation(response.data);
+                  } else {
+                    setRequestApprobation([]);
+                  }
+                } catch (error: any) {
+                  const errorMessage = error.response?.data?.message || error.message || 'Erreur lors du chargement des demandes en attente';
+                  setError(errorMessage);
+                  toast.error(errorMessage);
+                } finally {
+                  setIsLoading(false);
+                }
+              };
+              fetchPendingRequests();
+            }}>
+              Réessayer
+            </Button>
+          </CardContent>
+        </Card>
       ) : requestApprobation.length === 0 ? (
         <Card className="w-full box-border">
           <CardContent className="text-center py-6 sm:py-8">
@@ -510,42 +652,112 @@ export default function Validation() {
                     </p>
                   </div>
 
-                  {/* Comments */}
+                  {/* Comments - Obligatoire uniquement pour rejet */}
                   <div className="space-y-2 sm:space-y-3">
                     <Label htmlFor={`comment-${request.request_code}`} className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Commentaires de validation
+                      Commentaires de validation <span className="text-muted-foreground/60">(obligatoire pour rejet)</span>
                     </Label>
                     <Textarea
                       id={`comment-${request.request_code}`}
                       className="min-h-[70px] sm:min-h-[80px] md:min-h-[100px] text-xs sm:text-sm w-full min-w-0"
-                      placeholder="Expliquez la raison du rejet... Ecrire (RAS) au cas contraire"
+                      placeholder="Raison du rejet (obligatoire si rejet)... Laisser vide si approbation"
                       value={getRejectionReason(request.id)}
                       onChange={(e) => setRejectionReason(request.id, e.target.value)}
                     />
                   </div>
 
+                  {/* Validation Status (for dual validation) */}
+                  {requiresDualValidation(request.priority) && (
+                    <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-muted/30 rounded-lg border">
+                      <Label className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Statut de validation
+                      </Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] sm:text-xs text-muted-foreground">Niveau 1 (Supervisor)</span>
+                            <Badge variant="outline" className={
+                              request.validation_status_level1 === 'approved' ? 'bg-success text-success-foreground' :
+                              request.validation_status_level1 === 'rejected' ? 'bg-destructive text-destructive-foreground' :
+                              'bg-warning text-warning-foreground'
+                            }>
+                              {request.validation_status_level1 === 'approved' ? '✓ Approuvé' :
+                               request.validation_status_level1 === 'rejected' ? '✗ Rejeté' :
+                               '⏳ En attente'}
+                            </Badge>
+                          </div>
+                          {request.validator_level1 && (
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">
+                              Par: {request.validator_level1.full_name}
+                            </p>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] sm:text-xs text-muted-foreground">Niveau 2 (Admin/Director)</span>
+                            <Badge variant="outline" className={
+                              request.validation_status_level2 === 'approved' ? 'bg-success text-success-foreground' :
+                              request.validation_status_level2 === 'rejected' ? 'bg-destructive text-destructive-foreground' :
+                              'bg-warning text-warning-foreground'
+                            }>
+                              {request.validation_status_level2 === 'approved' ? '✓ Approuvé' :
+                               request.validation_status_level2 === 'rejected' ? '✗ Rejeté' :
+                               request.validation_status_level1 === 'approved' ? '⏳ En attente' : '⏸ Non requis'}
+                            </Badge>
+                          </div>
+                          {request.validator_level2 && (
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">
+                              Par: {request.validator_level2.full_name}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-2 sm:pt-3 md:pt-4 border-t min-w-0">
-                    <Button variant="outline" className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto text-xs sm:text-sm h-9 sm:h-10 min-w-0 flex-shrink-0"
-                      onClick={() => {
-                        acceptedRequest(request.id, { 
-                          validation_status: "rejected"
-                        }, getRejectionReason(request.id))
-                      }}
-                    >
-                      <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                      <span className="truncate">Rejeter</span>
-                    </Button>
-                    <Button variant="success" className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto text-xs sm:text-sm h-9 sm:h-10 min-w-0 flex-shrink-0"
-                      onClick={() => {
-                        acceptedRequest(request.id, { 
-                          validation_status: "approved"
-                        }, getRejectionReason(request.id))
-                      }}
-                    >
-                      <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                      <span className="truncate">Approuver</span>
-                    </Button>
+                    {getValidationLevel(request) !== null && (
+                      <>
+                        <Button variant="outline" className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto text-xs sm:text-sm h-9 sm:h-10 min-w-0 flex-shrink-0"
+                          onClick={() => {
+                            acceptedRequest(request.id, { 
+                              validation_status: "rejected"
+                            }, getRejectionReason(request.id), request)
+                          }}
+                        >
+                          <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                          <span className="truncate">Rejeter</span>
+                        </Button>
+                        <Button variant="success" className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto text-xs sm:text-sm h-9 sm:h-10 min-w-0 flex-shrink-0"
+                          onClick={() => {
+                            acceptedRequest(request.id, { 
+                              validation_status: "approved"
+                            }, getRejectionReason(request.id), request)
+                          }}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                          <span className="truncate">
+                            {requiresDualValidation(request.priority) && getValidationLevel(request) === 2 
+                              ? 'Approuver (Niveau 2)' 
+                              : requiresDualValidation(request.priority) && getValidationLevel(request) === 1
+                              ? 'Approuver (Niveau 1)'
+                              : 'Approuver'}
+                          </span>
+                        </Button>
+                      </>
+                    )}
+                    {getValidationLevel(request) === null && (
+                      <div className="text-xs sm:text-sm text-muted-foreground text-center w-full py-2">
+                        {requiresDualValidation(request.priority) 
+                          ? request.validation_status_level1 === 'pending' 
+                            ? 'En attente de validation niveau 1'
+                            : request.validation_status_level2 === 'pending'
+                            ? 'En attente de validation niveau 2'
+                            : 'Cette demande ne peut pas être validée'
+                          : 'Vous n\'êtes pas autorisé à valider cette demande'}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -639,15 +851,15 @@ export default function Validation() {
                 </p>
               </div>
 
-              {/* Comments */}
+              {/* Comments - Obligatoire uniquement pour rejet */}
               <div className="space-y-3">
                 <Label htmlFor="comment-dialog" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Commentaires de validation
+                  Commentaires de validation <span className="text-muted-foreground/60">(obligatoire pour rejet)</span>
                 </Label>
                 <Textarea
                   id="comment-dialog"
                   className="min-h-[100px] text-sm w-full min-w-0"
-                  placeholder="Expliquez la raison du rejet... Ecrire (RAS) au cas contraire"
+                  placeholder="Raison du rejet (obligatoire si rejet)... Laisser vide si approbation"
                   value={getRejectionReason(selectedRequest.id)}
                   onChange={(e) => setRejectionReason(selectedRequest.id, e.target.value)}
                 />

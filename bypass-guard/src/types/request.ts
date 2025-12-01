@@ -32,6 +32,31 @@ export interface BypassRequest {
   approvals: Approval[];
   comments: RequestComment[];
   
+  // Dual Validation Fields (for critical/emergency requests)
+  validated_by_level1_id?: number | null;
+  validated_at_level1?: string | null;
+  validation_status_level1?: 'pending' | 'approved' | 'rejected';
+  rejection_reason_level1?: string | null;
+  validator_level1?: {
+    id: number;
+    full_name: string;
+    email: string;
+  } | null;
+  
+  validated_by_level2_id?: number | null;
+  validated_at_level2?: string | null;
+  validation_status_level2?: 'pending' | 'approved' | 'rejected';
+  rejection_reason_level2?: string | null;
+  validator_level2?: {
+    id: number;
+    full_name: string;
+    email: string;
+  } | null;
+  
+  // Legacy validation fields (for backward compatibility)
+  validated_by_id?: number | null;
+  validated_at?: string | null;
+  
   // Audit Trail
   createdAt: Date;
   updatedAt: Date;

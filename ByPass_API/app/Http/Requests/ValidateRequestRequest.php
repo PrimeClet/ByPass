@@ -11,7 +11,8 @@ class ValidateRequestRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return auth()->user()->canValidateRequests();
+        $user = auth()->user();
+        return $user->hasAnyPermission(['requests.validate.level1', 'requests.validate.level2']);
     }
 
     /**
@@ -23,7 +24,7 @@ class ValidateRequestRequest extends FormRequest
     {
         return [
             'validation_status' => 'required|in:approved,rejected',
-            'rejection_reason' => 'required_if:validation_status,rejected|string|max:1000',
+            'rejection_reason' => 'nullable|required_if:validation_status,rejected|string|max:1000',
         ];
     }
 }

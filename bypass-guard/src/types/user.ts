@@ -14,6 +14,8 @@ export interface User {
   employeeId?: string;
   isActive: boolean;
   lastLogin?: Date;
+  spatie_roles?: string[]; // Rôles Spatie assignés à l'utilisateur
+  spatie_permissions?: string[]; // Permissions Spatie de l'utilisateur
 }
 
 export interface UserPermissions {

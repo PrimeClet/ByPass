@@ -8,7 +8,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 
-class RequestCreate extends Notification
+class RequestLevel1Approved extends Notification
 {
     use Queueable;
 
@@ -47,30 +47,11 @@ class RequestCreate extends Notification
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Nouvelle Requête Créée')
-            ->view('emails.requests.created', [
+            ->subject('Validation Niveau 1 Approuvée - Action Requise')
+            ->view('emails.requests.level1_approved', [
                 'request' => $this->request,
             ]);
     }
-
-    /**
-     * Get the array representation of the notification.
-     *
-     * @return array<string, mixed>
-     */
-    // public function toArray(object $notifiable): array
-    // {
-    //     return [
-    //         //
-    //     ];
-    // }
-
-    /**
-     * Get the notification's delivery channels.
-     *
-     * @param mixed $notifiable
-     * @return array
-     */
 
     /**
      * Get the array representation of the notification.
@@ -80,42 +61,45 @@ class RequestCreate extends Notification
      */
     public function toDatabase($notifiable): array
     {
-        $this->request->load(['requester', 'equipment.zone', 'sensor']);
+        $this->request->load(['requester', 'validatorLevel1', 'equipment.zone', 'sensor']);
         
         return [
             'id' => $this->request->id,
             'request_id' => $this->request->id,
             'request_code' => $this->request->request_code,
             'title' => $this->request->title,
-            'description' => $this->request->description ?? '',
+            'description' => "La demande {$this->request->request_code} a été approuvée au niveau 1. Validation niveau 2 requise.",
             'priority' => $this->request->priority,
             'status' => $this->request->status,
             'requester_name' => $this->request->requester->full_name ?? 'N/A',
+            'validator_level1_name' => $this->request->validatorLevel1->full_name ?? 'N/A',
             'equipment_name' => $this->request->equipment->name ?? 'N/A',
             'sensor_name' => $this->request->sensor->name ?? 'N/A',
             'url' => url('/validation'),
-            'created_at' => $this->request->created_at->toDateTimeString(),
+            'created_at' => now()->toDateTimeString(),
         ];
     }
 
     public function toBroadcast($notifiable): BroadcastMessage
     {
-        $this->request->load(['requester', 'equipment.zone', 'sensor']);
+        $this->request->load(['requester', 'validatorLevel1', 'equipment.zone', 'sensor']);
         
         return new BroadcastMessage([
-            'type' => 'request.created',
+            'type' => 'request.level1_approved',
             'id' => $this->request->id,
             'request_id' => $this->request->id,
             'request_code' => $this->request->request_code,
             'title' => $this->request->title,
-            'description' => $this->request->description ?? '',
+            'description' => "La demande {$this->request->request_code} a été approuvée au niveau 1. Validation niveau 2 requise.",
             'priority' => $this->request->priority,
             'status' => $this->request->status,
             'requester_name' => $this->request->requester->full_name ?? 'N/A',
+            'validator_level1_name' => $this->request->validatorLevel1->full_name ?? 'N/A',
             'equipment_name' => $this->request->equipment->name ?? 'N/A',
             'sensor_name' => $this->request->sensor->name ?? 'N/A',
             'url' => url('/validation'),
-            'created_at' => $this->request->created_at->toDateTimeString(),
+            'created_at' => now()->toDateTimeString(),
         ]);
     }
 }
+

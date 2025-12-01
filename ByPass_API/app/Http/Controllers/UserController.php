@@ -61,7 +61,13 @@ class UserController extends Controller
             });
         }
 
-        $users = $query->orderBy('full_name')->paginate(15);
+        $users = $query->with('roles')->orderBy('full_name')->paginate(15);
+
+        // Ajouter les rôles Spatie dans la réponse
+        $users->getCollection()->transform(function ($user) {
+            $user->spatie_roles = $user->roles->pluck('name')->toArray();
+            return $user;
+        });
 
         return response()->json($users);
     }
@@ -123,7 +129,7 @@ class UserController extends Controller
             'password' => 'required|string|min:8',
             'firstName' => 'required|string|max:255',
             'phone' => 'required|string|max:255',
-            'role' => 'required|in:user,supervisor,administrator, director',
+            'role' => 'required|in:user,supervisor,administrator,director',
         ]);
 
         $user = User::create([
@@ -135,6 +141,9 @@ class UserController extends Controller
             'role' => $request->role,
         ]);
 
+        // Assigner le rôle Spatie
+        $user->assignRole($request->role);
+
         AuditLog::log(
             'User Created',
             auth()->user(),
@@ -142,6 +151,9 @@ class UserController extends Controller
             $user->id,
             ['username' => $user->username, 'role' => $user->role]
         );
+
+        $user->load('roles');
+        $user->spatie_roles = $user->roles->pluck('name')->toArray();
 
         return response()->json($user, 201);
     }
@@ -173,6 +185,10 @@ class UserController extends Controller
         if (!auth()->user()->isAdministrator() && auth()->id() !== $user->id) {
             return response()->json(['message' => 'Non autorisé'], 403);
         }
+
+        $user->load('roles', 'permissions');
+        $user->spatie_roles = $user->roles->pluck('name')->toArray();
+        $user->spatie_permissions = $user->permissions->pluck('name')->toArray();
 
         return response()->json($user);
     }
@@ -230,7 +246,7 @@ class UserController extends Controller
 
         // Seul un admin peut changer le rôle
         if (auth()->user()->isAdministrator()) {
-            $rules['role'] = 'sometimes|in:user,supervisor,administrator';
+            $rules['role'] = 'sometimes|in:user,supervisor,administrator,director';
             $rules['is_active'] = 'sometimes|boolean';
         }
 
@@ -252,6 +268,11 @@ class UserController extends Controller
 
         $user->update($data);
 
+        // Mettre à jour le rôle Spatie si le rôle a changé
+        if (auth()->user()->isAdministrator() && $request->has('role')) {
+            $user->syncRoles([$request->role]);
+        }
+
         AuditLog::log(
             'User Updated',
             auth()->user(),
@@ -259,6 +280,9 @@ class UserController extends Controller
             $user->id,
             ['username' => $user->username]
         );
+
+        $user->load('roles');
+        $user->spatie_roles = $user->roles->pluck('name')->toArray();
 
         return response()->json($user);
     }

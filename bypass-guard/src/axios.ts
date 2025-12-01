@@ -4,7 +4,7 @@ import { store } from '@/store/store'; // ton Redux store
 
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8001/api',
+  baseURL: 'https://bypass-api.jobs-conseil.host/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
