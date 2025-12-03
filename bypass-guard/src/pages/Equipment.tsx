@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Building2, Search, Filter, LayoutGrid, Table as TableIcon, Shield, ArrowLeft } from 'lucide-react';
+import { Plus, Edit2, Trash2, Building2, Search, Filter, LayoutGrid, Table as TableIcon, Shield, ArrowLeft, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { mockEquipment, getAllZones } from '@/data/mockEquipment';
 import type { Equipment, EquipmentType, EquipmentStatus, CriticalityLevel, Zone } from '@/types/equipment';
 import { Link } from 'react-router-dom';
-import api from '../axios'
+import api from '../axios';
+import { exportToCSV } from '../utils/exportData';
 
 const Equipment = () => {
   const { toast } = useToast();
@@ -86,7 +87,7 @@ const Equipment = () => {
               name: eqs.name,
               code: eqs.code,
               type: eqs.type,
-              zone: eqs.zone.name,
+              zone: eqs.zone?.name || 'N/A',
               fabricant: eqs.fabricant,
               status: eqs.status,
               criticite: eqs.criticite,
@@ -258,6 +259,34 @@ const Equipment = () => {
     setIsDialogOpen(true);
   };
 
+  const handleExportData = () => {
+    try {
+      const dataToExport = filteredEquipment.map(eq => ({
+        'Code': eq.code,
+        'Nom': eq.name,
+        'Type': eq.type,
+        'Zone': eq.zone,
+        'Fabricant': eq.fabricant || 'N/A',
+        'Statut': eq.status,
+        'Criticité': eq.criticite || 'N/A',
+        'Nombre de capteurs': eq.sensors ? eq.sensors.length : 0
+      }));
+
+      exportToCSV(dataToExport, `equipements_${new Date().toISOString().split('T')[0]}`);
+      toast({
+        title: "Export réussi",
+        description: "Les données ont été exportées avec succès.",
+      });
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      toast({
+        title: "Erreur d'export",
+        description: "Une erreur est survenue lors de l'export des données.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="w-full p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
       {/* Header avec breadcrumb */}
@@ -347,14 +376,26 @@ const Equipment = () => {
                 </Select>
               </div>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={openCreateDialog} className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10" size={isMobile ? "sm" : "default"}>
-                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline truncate">Nouvel Équipement</span>
-                  <span className="sm:hidden truncate">Nouvel</span>
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
+              <Button 
+                onClick={handleExportData} 
+                variant="outline"
+                className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10" 
+                size={isMobile ? "sm" : "default"}
+                disabled={filteredEquipment.length === 0}
+              >
+                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline truncate">Exporter</span>
+                <span className="sm:hidden truncate">Export</span>
+              </Button>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={openCreateDialog} className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10" size={isMobile ? "sm" : "default"}>
+                    <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline truncate">Nouvel Équipement</span>
+                    <span className="sm:hidden truncate">Nouvel</span>
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
                 <DialogHeader>
                   <DialogTitle className="text-base sm:text-lg">
@@ -468,6 +509,7 @@ const Equipment = () => {
                 </form>
               </DialogContent>
             </Dialog>
+          </div>
           </div>
         </CardContent>
       </Card>

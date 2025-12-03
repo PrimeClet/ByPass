@@ -112,11 +112,11 @@ export const BypassRequestForm = () => {
               name: eqs.name,
               code: eqs.code,
               type: eqs.type,
-              zone: eqs.zone.name,
+              zone: eqs.zone?.name || 'N/A',
               fabricant: eqs.fabricant,
               status: eqs.status,
               criticite: eqs.criticite,
-              sensors: eqs.sensors.map(
+              sensors: eqs.sensors?.map(
                 (sensor) => ({
                     id: sensor.id,
                     equipmentId: sensor.equipment_id,
@@ -129,7 +129,7 @@ export const BypassRequestForm = () => {
                     lastCalibration: new Date(sensor.Dernier_Etallonnage),
                     isActive: (sensor.status === 'active' ? true : false)
                 })
-              )
+              ) || []
             })
           );
 

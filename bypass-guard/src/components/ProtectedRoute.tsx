@@ -7,27 +7,22 @@ interface ProtectedRouteProps {
   allowedRoles: string[];
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles,children }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children }) => {
   const location = useLocation();
 
-  // Récupère le token depuis le store Redux
+  // Récupère le token et l'utilisateur depuis le store Redux
   const token = useSelector((state: RootState) => state.user.token);
   const user = useSelector((state: RootState) => state.user.user);
 
-  console.log('Token:', token);
-
-  if(user){
-    if (!allowedRoles.includes(user.role)) {
-      return <Navigate to="/requests/new" />
-    }
-  } else {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-  
-
-  if (!token) {
+  // Vérifier d'abord si l'utilisateur est authentifié (token présent)
+  if (!token || !user) {
     // Redirection vers la page login avec le return URL
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Ensuite vérifier si le rôle est autorisé
+  if (!allowedRoles.includes(user.role)) {
+    return <Navigate to="/requests/new" replace />;
   }
 
   return <>{children}</>;

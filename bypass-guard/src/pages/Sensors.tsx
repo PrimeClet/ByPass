@@ -11,14 +11,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Trash2, Search, Settings, Gauge, LayoutGrid, Table as TableIcon, ArrowLeft } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Settings, Gauge, LayoutGrid, Table as TableIcon, ArrowLeft, Download } from 'lucide-react';
 import { mockEquipment } from '@/data/mockEquipment';
 import { Sensor, SensorType, SensorStatus } from '@/types/equipment';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link } from 'react-router-dom';
 import type { Equipment, EquipmentType, EquipmentStatus, CriticalityLevel, Zone } from '@/types/equipment';
-import api from '../axios'
+import api from '../axios';
+import { exportToCSV } from '../utils/exportData';
 
 // Type étendu pour les sensors avec les informations d'équipement
 type SensorWithEquipment = Sensor & {
@@ -72,7 +73,7 @@ const Sensors: React.FC = () => {
               name: eqs.name,
               code: eqs.code,
               type: eqs.type,
-              zone: eqs.zone.name,
+              zone: eqs.zone?.name || 'N/A',
               fabricant: eqs.fabricant,
               status: eqs.status,
               criticite: eqs.criticite,
@@ -175,33 +176,35 @@ const Sensors: React.FC = () => {
 
     api({
       method: 'post',
-      url: `/equipment/${sensor.equipmentId}/sensors`,
+      url: `/equipment/${newSensor.equipmentId}/sensors`,
       data: newSensor
     })
     .then(data => {
       fetchEquipment()
       fetchSensor()
+      setNewSensor({
+        name: '',
+        code: '',
+        type: 'temperature',
+        unit: '',
+        minValue: 0,
+        maxValue: 100,
+        criticalThreshold: 80,
+        equipmentId: '',
+        status: 'active'
+      });
+      setEditingSensor(null);
+      setIsAddDialogOpen(false);
       if (data) {
         toast.success("Capteur créé");
       } else {
         toast.error("Probleme de connexion");
       }
     })
-
-    setNewSensor({
-      name: '',
-      code: '',
-      type: 'temperature',
-      unit: '',
-      minValue: 0,
-      maxValue: 100,
-      criticalThreshold: 80,
-      equipmentId: '',
-      status: 'active'
+    .catch(error => {
+      console.error('Error:', error);
+      toast.error('Erreur lors de l\'ajout du capteur');
     });
-    setEditingSensor(null);
-    setIsAddDialogOpen(false);
-    toast.success('Capteur ajouté avec succès');
   };
 
   const handleEditSensor = (sensor: Sensor) => {
@@ -238,26 +241,51 @@ const Sensors: React.FC = () => {
       })
       .then(data => {
         fetchSensor()
+        setEditingSensor(null);
+        setNewSensor({
+          name: '',
+          code: '',
+          type: 'temperature',
+          unit: '',
+          minValue: 0,
+          maxValue: 100,
+          criticalThreshold: 80,
+          equipmentId: '',
+          status: 'active'
+        });
+        setIsAddDialogOpen(false);
         if (data) {
           toast.success('Capteur modifié avec succès');
         } else {
           toast.error('Erreur de Connexion');
         }
       })
-
-      setEditingSensor(null);
-      setNewSensor({
-        name: '',
-        code: '',
-        type: 'temperature',
-        unit: '',
-        minValue: 0,
-        maxValue: 100,
-        criticalThreshold: 80,
-        equipmentId: '',
-        status: 'active'
+      .catch(error => {
+        console.error('Error:', error);
+        toast.error('Erreur lors de la modification du capteur');
       });
-      setIsAddDialogOpen(false);
+    }
+  };
+
+  const handleExportData = () => {
+    try {
+      const dataToExport = filteredSensors.map(sens => ({
+        'Code': sens.code,
+        'Nom': sens.name,
+        'Type': sens.type,
+        'Unité': sens.unit || 'N/A',
+        'Seuil critique': sens.criticalThreshold || 'N/A',
+        'Statut': sens.status,
+        'Équipement': sens.equipmentName || 'N/A',
+        'Code équipement': sens.equipmentCode || 'N/A',
+        'Dernière calibration': sens.lastCalibration || 'N/A'
+      }));
+
+      exportToCSV(dataToExport, `capteurs_${new Date().toISOString().split('T')[0]}`);
+      toast.success('Export réussi - Les données ont été exportées avec succès.');
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      toast.error('Erreur d\'export - Une erreur est survenue lors de l\'export des données.');
     }
   };
 
@@ -430,30 +458,42 @@ const Sensors: React.FC = () => {
                 </Select>
               </div>
             </div>
-            <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-          setIsAddDialogOpen(open);
-          if (!open) {
-            setEditingSensor(null);
-            setNewSensor({
-              name: '',
-              code: '',
-              type: 'temperature',
-              unit: '',
-              minValue: 0,
-              maxValue: 100,
-              criticalThreshold: 80,
-              equipmentId: '',
-              status: 'active'
-            });
-          }
-        }}>
-          <DialogTrigger asChild>
-                <Button className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10" size={isMobile ? "sm" : "default"}>
-              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline truncate">Ajouter un capteur</span>
-              <span className="sm:hidden truncate">Ajouter</span>
-            </Button>
-          </DialogTrigger>
+            <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
+              <Button 
+                onClick={handleExportData} 
+                variant="outline"
+                className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10" 
+                size={isMobile ? "sm" : "default"}
+                disabled={filteredSensors.length === 0}
+              >
+                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline truncate">Exporter</span>
+                <span className="sm:hidden truncate">Export</span>
+              </Button>
+              <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+                setIsAddDialogOpen(open);
+                if (!open) {
+                  setEditingSensor(null);
+                  setNewSensor({
+                    name: '',
+                    code: '',
+                    type: 'temperature',
+                    unit: '',
+                    minValue: 0,
+                    maxValue: 100,
+                    criticalThreshold: 80,
+                    equipmentId: '',
+                    status: 'active'
+                  });
+                }
+              }}>
+                <DialogTrigger asChild>
+                  <Button className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10" size={isMobile ? "sm" : "default"}>
+                    <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline truncate">Ajouter un capteur</span>
+                    <span className="sm:hidden truncate">Ajouter</span>
+                  </Button>
+                </DialogTrigger>
           <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
             <DialogHeader>
               <DialogTitle className="text-base sm:text-lg">
@@ -581,6 +621,7 @@ const Sensors: React.FC = () => {
             </form>
               </DialogContent>
         </Dialog>
+          </div>
           </div>
         </CardContent>
       </Card>
