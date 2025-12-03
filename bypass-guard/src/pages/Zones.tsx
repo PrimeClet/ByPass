@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, MapPin, Search, LayoutGrid, Table as TableIcon, ArrowLeft, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, MapPin, Search, LayoutGrid, Table as TableIcon, ArrowLeft, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,7 @@ const Zones = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchZones = async () => {
     setIsLoading(true);
@@ -86,6 +87,16 @@ const Zones = () => {
     setCurrentPage(1);
   }, [searchTerm, itemsPerPage]);
 
+  // Ajuster la page courante si elle dépasse le nombre total de pages après suppression
+  useEffect(() => {
+    const totalPages = Math.ceil(filteredZones.length / itemsPerPage);
+    if (filteredZones.length === 0) {
+      setCurrentPage(1);
+    } else if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [filteredZones.length, itemsPerPage, currentPage]);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
   const [formData, setFormData] = useState({
@@ -93,25 +104,30 @@ const Zones = () => {
     description: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
-    if (editingZone) {
-      setZones(zones.map(zone => 
-        zone.id === editingZone.id 
-          ? { ...zone, ...formData }
-          : zone
-      ));
+    try {
+      if (editingZone) {
+        setZones(zones.map(zone => 
+          zone.id === editingZone.id 
+            ? { ...zone, ...formData }
+            : zone
+        ));
 
-      let id = editingZone.id.split("_")[1] 
+        let id = typeof editingZone.id === 'string' && editingZone.id.includes('_') 
+          ? editingZone.id.split("_")[1] 
+          : editingZone.id;
 
-      api({
-        method: 'put',
-        url: `/zones/${id}`,
-        data: formData
-      })
-      .then(data => {
-        fetchZones()
+        const data = await api({
+          method: 'put',
+          url: `/zones/${id}`,
+          data: formData
+        });
+
+        await fetchZones();
+        
         if (data) {
           toast({
             title: "Zone modifiée",
@@ -119,21 +135,19 @@ const Zones = () => {
           });
         } else {
           toast({
-            title: 'Échec de la mise a jour de l\'equipement',
+            title: 'Échec de la mise à jour',
             variant: 'destructive',
           });
         }
-      })
-      
-    } else {
-    
-      api({
-        method: 'post',
-        url: '/zones',
-        data: formData
-      })
-      .then(data => {
-        fetchZones()
+      } else {
+        const data = await api({
+          method: 'post',
+          url: '/zones',
+          data: formData
+        });
+
+        await fetchZones();
+        
         if (data) {
           toast({
             title: "Zone créée",
@@ -141,21 +155,30 @@ const Zones = () => {
           });
         } else {
           toast({
-            title: 'Échec de la déconnexion',
+            title: 'Échec de la création',
             variant: 'destructive',
           });
         }
-      })
-     
+      }
+      
+      setIsDialogOpen(false);
+      setEditingZone(null);
+      setFormData({ name: '', description: ''});
+    } catch (error: any) {
+      console.error('Error submitting zone:', error);
+      toast({
+        title: "Erreur",
+        description: error.response?.data?.message || (editingZone ? "Erreur lors de la modification de la zone." : "Erreur lors de la création de la zone."),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsDialogOpen(false);
-    setEditingZone(null);
-    setFormData({ name: '', description: ''});
   };
 
   const handleEdit = (zone: Zone) => {
     setEditingZone(zone);
+    setIsSubmitting(false);
     setFormData({
       name: zone.name,
       description: zone.description
@@ -171,7 +194,8 @@ const Zones = () => {
         description: "La zone a été supprimée avec succès.",
       });
       // Recharger la liste des zones après suppression
-      fetchZones();
+      await fetchZones();
+      // Ajuster la pagination si nécessaire (l'effet s'en chargera automatiquement)
     } catch (error: any) {
       console.error('Error deleting zone:', error);
       toast({
@@ -184,6 +208,7 @@ const Zones = () => {
 
   const openCreateDialog = () => {
     setEditingZone(null);
+    setIsSubmitting(false);
     setFormData({ name: '', description: ''});
     setIsDialogOpen(true);
   };
@@ -278,7 +303,14 @@ const Zones = () => {
                 <span className="hidden sm:inline">Exporter</span>
                 <span className="sm:hidden">Export</span>
               </Button>
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                setIsDialogOpen(open);
+                if (!open) {
+                  setEditingZone(null);
+                  setIsSubmitting(false);
+                  setFormData({ name: '', description: ''});
+                }
+              }}>
                 <DialogTrigger asChild>
                   <Button onClick={openCreateDialog} className="gap-2 w-full sm:w-auto flex-shrink-0 text-sm">
                     <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -321,11 +353,23 @@ const Zones = () => {
                     </div>
                   </div>
                   <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">
+                    <Button type="button" variant="outline" onClick={() => {
+                      setIsDialogOpen(false);
+                      setEditingZone(null);
+                      setIsSubmitting(false);
+                      setFormData({ name: '', description: ''});
+                    }} className="w-full sm:w-auto">
                       Annuler
                     </Button>
-                    <Button type="submit" className="w-full sm:w-auto">
-                      {editingZone ? 'Modifier' : 'Créer'}
+                    <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {editingZone ? 'Modification...' : 'Création...'}
+                        </>
+                      ) : (
+                        editingZone ? 'Modifier' : 'Créer'
+                      )}
                     </Button>
                   </DialogFooter>
                 </form>

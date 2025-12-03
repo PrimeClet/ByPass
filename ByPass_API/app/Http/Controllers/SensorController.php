@@ -7,7 +7,7 @@ use App\Models\Equipment;
 use App\Models\AuditLog;
 use App\Models\Zone;
 use Illuminate\Http\Request;
-use Log;
+use Illuminate\Support\Facades\Log;
 use OpenApi\Attributes as OA;
 
 class SensorController extends Controller
@@ -107,7 +107,14 @@ class SensorController extends Controller
 
         Log::info($equipment);
 
-        $zonei = Zone::where('id', $equipment->zone_id)->first();
+        // Charger la zone depuis la relation de l'équipement
+        $equipment->load('zone');
+        $zonei = $equipment->zone;
+        
+        if (!$zonei) {
+            return response()->json(['message' => 'Zone non trouvée pour cet équipement'], 404);
+        }
+        
         $nms = Sensor::all()->count() + 1;
 
 
@@ -123,27 +130,67 @@ class SensorController extends Controller
             'status' => 'sometimes|in:active,bypassed,maintenance,faulty,calibration',
         ]);
 
-        $sensor = $equipment->sensors()->create([
-           'name' => $request->name,
-            'code' => $this->sensorCode($request->name, $equipment->name,$zonei->name,$nms),
-            'type' => $request->type,
-            'equipment_id' => $equipment->id,
-            'seuil_critique' => $request->criticalThreshold,
-            'unite' => $request->unit,
-            'Dernier_Etallonnage' => now(),
-            'status' => $request->status,
-            'last_reading_at' => now()
-        ]);
+        try {
+            // Vérifier que l'équipement a un nom
+            if (!$equipment->name) {
+                Log::error('Equipment name is missing', ['equipment_id' => $equipment->id]);
+                return response()->json(['message' => 'L\'équipement n\'a pas de nom'], 400);
+            }
 
-        AuditLog::log(
-            'Sensor Created',
-            auth()->user(),
-            'Sensor',
-            $sensor->id,
-            ['name' => $sensor->name, 'equipment' => $equipment->name]
-        );
+            // Vérifier que la zone a un nom
+            if (!$zonei->name) {
+                Log::error('Zone name is missing', ['zone_id' => $zonei->id, 'equipment_id' => $equipment->id]);
+                return response()->json(['message' => 'La zone n\'a pas de nom'], 400);
+            }
 
-        return response()->json($sensor, 201);
+            // Valeur par défaut pour le statut
+            $status = $request->status ?? 'active';
+
+            // Log des données avant création
+            Log::info('Creating sensor', [
+                'name' => $request->name,
+                'type' => $request->type,
+                'unit' => $request->unit,
+                'criticalThreshold' => $request->criticalThreshold,
+                'status' => $status,
+                'equipment_id' => $equipment->id,
+                'equipment_name' => $equipment->name,
+                'zone_name' => $zonei->name
+            ]);
+
+            $sensorCode = $this->sensorCode($request->name, $equipment->name, $zonei->name, $nms);
+            
+            Log::info('Generated sensor code', ['code' => $sensorCode]);
+
+            $sensor = $equipment->sensors()->create([
+               'name' => $request->name,
+                'code' => $sensorCode,
+                'type' => $request->type,
+                'equipment_id' => $equipment->id,
+                'seuil_critique' => $request->criticalThreshold,
+                'unite' => $request->unit,
+                'Dernier_Etallonnage' => now(),
+                'status' => $status,
+                'last_reading_at' => now()
+            ]);
+
+            AuditLog::log(
+                'Sensor Created',
+                auth()->user(),
+                'Sensor',
+                $sensor->id,
+                ['name' => $sensor->name, 'equipment' => $equipment->name]
+            );
+
+            return response()->json($sensor, 201);
+        } catch (\Exception $e) {
+            Log::error('Error creating sensor: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'message' => 'Erreur lors de la création du capteur',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     #[OA\Get(

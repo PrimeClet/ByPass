@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { Plus, Pencil, Trash2, Search, User as UserIcon, LayoutGrid, Table as TableIcon, ArrowLeft, Users as UsersIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, User as UserIcon, LayoutGrid, Table as TableIcon, ArrowLeft, Users as UsersIcon, Loader2 } from 'lucide-react';
 import { mockUsers } from '@/data/mockUsers';
 import { User, UserRole } from '@/types/user';
 import { toast } from 'sonner';
@@ -31,6 +31,7 @@ const Users: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newUser, setNewUser] = useState({
     firstName: '',
     lastName: '',
@@ -68,7 +69,8 @@ const Users: React.FC = () => {
     setCurrentPage(1);
   }, [searchTerm, selectedDepartment, itemsPerPage]);
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
+    setIsSubmitting(true);
     const user: User = {
       id: `user-${Date.now()}`,
       ...newUser,
@@ -86,18 +88,21 @@ const Users: React.FC = () => {
       role: newUser.role,
     };
     
-    api({
-      method: 'post',
-      url: '/users',
-      data: userData
-    })
-    .then(data => {
-      getUsersList()
+    try {
+      const data = await api({
+        method: 'post',
+        url: '/users',
+        data: userData
+      });
+
+      await getUsersList();
+      
       if (data) {
         toast.success('Utilisateur ajouté avec succès');
       } else {
         toast.error('Erreur durant l\'ajout');
       }
+      
       setNewUser({
         firstName: '',
         lastName: '',
@@ -114,15 +119,17 @@ const Users: React.FC = () => {
       });
       setEditingUser(null);
       setIsAddDialogOpen(false);
-    })
-    .catch(error => {
+    } catch (error: any) {
       console.error('Error:', error);
-      toast.error('Erreur lors de l\'ajout de l\'utilisateur');
-    });
+      toast.error(error.response?.data?.message || 'Erreur lors de l\'ajout de l\'utilisateur');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEditUser = (user: User) => {
     setEditingUser(user);
+    setIsSubmitting(false);
     // Extraire firstName et lastName depuis full_name si nécessaire
     let firstName = user.firstName || '';
     let lastName = user.lastName || '';
@@ -152,8 +159,9 @@ const Users: React.FC = () => {
     setIsAddDialogOpen(true);
   };
 
-  const handleUpdateUser = () => {
+  const handleUpdateUser = async () => {
     if (editingUser) {
+      setIsSubmitting(true);
       setUsers(users.map(user => 
         user.id === editingUser.id 
           ? { ...editingUser, ...newUser }
@@ -180,18 +188,21 @@ const Users: React.FC = () => {
         updateData.role = newUser.role;
       }
       
-      api({
-        method: 'put',
-        url: `/users/${newUser.id}`,
-        data: updateData
-      })
-      .then(data => {
-        getUsersList()
+      try {
+        const data = await api({
+          method: 'put',
+          url: `/users/${newUser.id}`,
+          data: updateData
+        });
+
+        await getUsersList();
+        
         if (data) {
           toast.success('Utilisateur modifié avec succès');
         } else {
           toast.error('Erreur lors de la modification!');
         }
+        
         setNewUser({
           firstName: '',
           lastName: '',
@@ -208,12 +219,33 @@ const Users: React.FC = () => {
         });
         setEditingUser(null);
         setIsAddDialogOpen(false);
-      })
-      .catch(error => {
+      } catch (error: any) {
         console.error('Error:', error);
-        toast.error('Erreur lors de la modification de l\'utilisateur');
-      });
+        toast.error(error.response?.data?.message || 'Erreur lors de la modification de l\'utilisateur');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
+  };
+
+  const openCreateDialog = () => {
+    setEditingUser(null);
+    setIsSubmitting(false);
+    setNewUser({
+      firstName: '',
+      lastName: '',
+      username: '',
+      email: '',
+      role: 'user',
+      department: '',
+      full_name: '',
+      password: '',
+      zone: '',
+      phone: '',
+      id: '',
+      employeeId: ''
+    });
+    setIsAddDialogOpen(true);
   };
 
   const handleDeleteUser = (userId: string) => {
@@ -264,9 +296,9 @@ const Users: React.FC = () => {
     }
   };
 
-  const getUsersList = () => {
+  const getUsersList = async () => {
     setIsLoading(true);
-    api.get('/users')
+    return api.get('/users')
       .then(response => {
         // Handle successful response
         const datas = response.data.data;
@@ -377,6 +409,7 @@ const Users: React.FC = () => {
               setIsAddDialogOpen(open);
               if (!open) {
                 setEditingUser(null);
+                setIsSubmitting(false);
                 setNewUser({
                   firstName: '',
                   lastName: '',
@@ -394,7 +427,7 @@ const Users: React.FC = () => {
               }
             }}>
               <DialogTrigger asChild>
-                <Button onClick={() => setIsAddDialogOpen(true)} className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10">
+                <Button onClick={openCreateDialog} className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10">
                   <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline truncate">Ajouter un utilisateur</span>
                   <span className="sm:hidden truncate">Ajouter</span>
@@ -529,6 +562,7 @@ const Users: React.FC = () => {
                 <Button type="button" variant="outline" onClick={() => {
                   setIsAddDialogOpen(false);
                   setEditingUser(null);
+                  setIsSubmitting(false);
                   setNewUser({
                     firstName: '',
                     lastName: '',
@@ -546,8 +580,15 @@ const Users: React.FC = () => {
                 }} className="w-full sm:w-auto text-sm">
                   Annuler
                 </Button>
-                <Button type="submit" className="w-full sm:w-auto text-sm">
-                  {editingUser ? 'Modifier' : 'Ajouter'}
+                <Button type="submit" className="w-full sm:w-auto text-sm" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {editingUser ? 'Modification...' : 'Ajout...'}
+                    </>
+                  ) : (
+                    editingUser ? 'Modifier' : 'Ajouter'
+                  )}
                 </Button>
               </DialogFooter>
             </form>
@@ -770,7 +811,7 @@ const Users: React.FC = () => {
                           }
                         </p>
                         {users.length === 0 && (
-                          <Button onClick={() => setIsAddDialogOpen(true)} className="w-full sm:w-auto">
+                          <Button onClick={openCreateDialog} className="w-full sm:w-auto">
                             <Plus className="w-4 h-4 mr-2" />
                             Ajouter un utilisateur
                           </Button>
