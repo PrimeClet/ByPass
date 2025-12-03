@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Building2, Search, Filter, LayoutGrid, Table as TableIcon, Shield, ArrowLeft, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Building2, Search, Filter, LayoutGrid, Table as TableIcon, Shield, ArrowLeft, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,7 @@ const Equipment = () => {
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>(isMobile ? 'grid' : 'grid');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({ 
     name: '',
@@ -158,23 +159,36 @@ const Equipment = () => {
     setCurrentPage(1);
   }, [searchTerm, selectedZone, selectedStatus, itemsPerPage]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (editingEquipment) {
-      setEquipment(equipment.map(eq => 
-        eq.id === editingEquipment.id 
-          ? { ...eq, ...formData, updatedAt: new Date() }
-          : eq
-      ));
+  // Ajuster la page courante si elle dépasse le nombre total de pages après suppression
+  useEffect(() => {
+    const totalPages = Math.ceil(filteredEquipment.length / itemsPerPage);
+    if (filteredEquipment.length === 0) {
+      setCurrentPage(1);
+    } else if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [filteredEquipment.length, itemsPerPage, currentPage]);
 
-      api({
-        method: 'put',
-        url: `/equipment/${editingEquipment.id}`,
-        data: formData
-      })
-      .then(data => {
-        fetchEquipment()
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      if (editingEquipment) {
+        setEquipment(equipment.map(eq => 
+          eq.id === editingEquipment.id 
+            ? { ...eq, ...formData, updatedAt: new Date() }
+            : eq
+        ));
+
+        const data = await api({
+          method: 'put',
+          url: `/equipment/${editingEquipment.id}`,
+          data: formData
+        });
+
+        await fetchEquipment();
+        
         if (data) {
           toast({
             title: "Équipement modifié",
@@ -182,29 +196,28 @@ const Equipment = () => {
           });
         } else {
           toast({
-            title: 'Échec de la déconnexion',
+            title: 'Échec de la mise à jour',
             variant: 'destructive',
           });
         }
-      })
-      
-    } else {
-      const newEquipment: Equipment = {
-        id: `eq_${Date.now()}`,
-        ...formData,
-        installationDate: new Date(),
-        sensors: []
-      };
+      } else {
+        const newEquipment: Equipment = {
+          id: `eq_${Date.now()}`,
+          ...formData,
+          installationDate: new Date(),
+          sensors: []
+        };
 
-      setEquipment([...equipment, newEquipment]);
-      
-      api({
-        method: 'post',
-        url: '/equipment',
-        data: formData
-      })
-      .then(data => {
-        fetchEquipment()
+        setEquipment([...equipment, newEquipment]);
+        
+        const data = await api({
+          method: 'post',
+          url: '/equipment',
+          data: formData
+        });
+
+        await fetchEquipment();
+        
         if (data) {
           toast({
             title: "Équipement créé",
@@ -212,24 +225,34 @@ const Equipment = () => {
           });
         } else {
           toast({
-            title: 'Échec de la déconnexion',
+            title: 'Échec de la création',
             variant: 'destructive',
           });
         }
-      })
+      }
+      
+      setIsDialogOpen(false);
+      setEditingEquipment(null);
+      setFormData({
+        name: '', type: '' as EquipmentType, zone: '',
+        fabricant: '', model: '', status: '' as EquipmentStatus,
+        criticite: '' as CriticalityLevel
+      });
+    } catch (error: any) {
+      console.error('Error submitting equipment:', error);
+      toast({
+        title: "Erreur",
+        description: error.response?.data?.message || (editingEquipment ? "Erreur lors de la modification de l'équipement." : "Erreur lors de la création de l'équipement."),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsDialogOpen(false);
-    setEditingEquipment(null);
-    setFormData({
-      name: '', type: '' as EquipmentType, zone: '',
-      fabricant: '', model: '', status: '' as EquipmentStatus,
-      criticite: '' as CriticalityLevel
-    });
   };
 
   const handleEdit = (eq: Equipment) => {
     setEditingEquipment(eq);
+    setIsSubmitting(false);
     setFormData({
       name: eq.name,
       type: eq.type,
@@ -250,7 +273,8 @@ const Equipment = () => {
         description: "L'équipement a été supprimé avec succès.",
       });
       // Recharger la liste des équipements après suppression
-      fetchEquipment();
+      await fetchEquipment();
+      // Ajuster la pagination si nécessaire (l'effet s'en chargera automatiquement)
     } catch (error: any) {
       console.error('Error deleting equipment:', error);
       toast({
@@ -263,6 +287,7 @@ const Equipment = () => {
 
   const openCreateDialog = () => {
     setEditingEquipment(null);
+    setIsSubmitting(false);
     setFormData({
       name: '', type: '' as EquipmentType, zone: '',
       fabricant: '', model: '', status: '' as EquipmentStatus,
@@ -400,7 +425,18 @@ const Equipment = () => {
                 <span className="hidden sm:inline truncate">Exporter</span>
                 <span className="sm:hidden truncate">Export</span>
               </Button>
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                setIsDialogOpen(open);
+                if (!open) {
+                  setEditingEquipment(null);
+                  setIsSubmitting(false);
+                  setFormData({
+                    name: '', type: '' as EquipmentType, zone: '',
+                    fabricant: '', model: '', status: '' as EquipmentStatus,
+                    criticite: '' as CriticalityLevel
+                  });
+                }
+              }}>
                 <DialogTrigger asChild>
                   <Button onClick={openCreateDialog} className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10" size={isMobile ? "sm" : "default"}>
                     <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -511,11 +547,27 @@ const Equipment = () => {
                   </div>
 
                   <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto" size={isMobile ? "sm" : "default"}>
+                    <Button type="button" variant="outline" onClick={() => {
+                      setIsDialogOpen(false);
+                      setEditingEquipment(null);
+                      setIsSubmitting(false);
+                      setFormData({
+                        name: '', type: '' as EquipmentType, zone: '',
+                        fabricant: '', model: '', status: '' as EquipmentStatus,
+                        criticite: '' as CriticalityLevel
+                      });
+                    }} className="w-full sm:w-auto" size={isMobile ? "sm" : "default"}>
                       Annuler
                     </Button>
-                    <Button type="submit" className="w-full sm:w-auto" size={isMobile ? "sm" : "default"}>
-                      {editingEquipment ? 'Modifier' : 'Créer'}
+                    <Button type="submit" className="w-full sm:w-auto" size={isMobile ? "sm" : "default"} disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {editingEquipment ? 'Modification...' : 'Création...'}
+                        </>
+                      ) : (
+                        editingEquipment ? 'Modifier' : 'Créer'
+                      )}
                     </Button>
                   </DialogFooter>
                 </form>

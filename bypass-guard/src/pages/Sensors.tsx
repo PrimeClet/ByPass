@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Trash2, Search, Settings, Gauge, LayoutGrid, Table as TableIcon, ArrowLeft, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Settings, Gauge, LayoutGrid, Table as TableIcon, ArrowLeft, Download, Loader2 } from 'lucide-react';
 import { mockEquipment } from '@/data/mockEquipment';
 import { Sensor, SensorType, SensorStatus } from '@/types/equipment';
 import { toast } from 'sonner';
@@ -53,6 +53,7 @@ const Sensors: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>(isMobile ? 'grid' : 'grid');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Flatten all sensors from all equipment
   // const allSensors = equipmentData.flatMap(equipment => 
@@ -66,7 +67,7 @@ const Sensors: React.FC = () => {
   const fetchEquipment = async () => {
     try {
       const response = await api.get('/equipment').then(response => {
-        if (response.data.data.length !== 0) {
+        if (response.data.data && response.data.data.length > 0) {
           const formattedEquips = response.data.data.map(
             (eqs: any, index: number) => ({
               id: eqs.id,
@@ -82,13 +83,17 @@ const Sensors: React.FC = () => {
           );
 
           setEquipment(formattedEquips)
+        } else {
+          setEquipment([]);
         }
       })
       .catch(error => {
         console.error('Error fetching data:', error);
+        setEquipment([]);
       }); 
     } catch (error) {
-      console.error("Erreur lors du GET zones :", error);
+      console.error("Erreur lors du GET equipment :", error);
+      setEquipment([]);
     }
   };
 
@@ -159,7 +164,18 @@ const Sensors: React.FC = () => {
     setCurrentPage(1);
   }, [searchTerm, selectedType, selectedStatus, selectedEquipment, itemsPerPage]);
 
-  const handleAddSensor = () => {
+  // Ajuster la page courante si elle dépasse le nombre total de pages après suppression
+  useEffect(() => {
+    const totalPages = Math.ceil(filteredSensors.length / itemsPerPage);
+    if (filteredSensors.length === 0) {
+      setCurrentPage(1);
+    } else if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [filteredSensors.length, itemsPerPage, currentPage]);
+
+  const handleAddSensor = async () => {
+    setIsSubmitting(true);
     const sensor: Sensor = {
       id: `sensor-${Date.now()}`,
       ...newSensor,
@@ -174,12 +190,16 @@ const Sensors: React.FC = () => {
         : equipment
     ));
 
-    api({
-      method: 'post',
-      url: `/equipment/${newSensor.equipmentId}/sensors`,
-      data: newSensor
-    })
-    .then(data => {
+    try {
+      const data = await api({
+        method: 'post',
+        url: `/equipment/${newSensor.equipmentId}/sensors`,
+        data: {
+          ...newSensor,
+          criticalThreshold: String(newSensor.criticalThreshold || '')
+        }
+      });
+
       fetchEquipment()
       fetchSensor()
       setNewSensor({
@@ -200,11 +220,12 @@ const Sensors: React.FC = () => {
       } else {
         toast.error("Probleme de connexion");
       }
-    })
-    .catch(error => {
+    } catch (error) {
       console.error('Error:', error);
       toast.error('Erreur lors de l\'ajout du capteur');
-    });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEditSensor = (sensor: Sensor) => {
@@ -217,14 +238,15 @@ const Sensors: React.FC = () => {
       minValue: sensor.minValue,
       maxValue: sensor.maxValue,
       criticalThreshold: sensor.criticalThreshold,
-      equipmentId: sensor.equipmentId,
+      equipmentId: String(sensor.equipmentId || ''),
       status: sensor.status
     });
     setIsAddDialogOpen(true);
   };
 
-  const handleUpdateSensor = () => {
+  const handleUpdateSensor = async () => {
     if (editingSensor) {
+      setIsSubmitting(true);
       setEquipmentData(equipmentData.map(equipment => ({
         ...equipment,
         sensors: equipment.sensors.map(sensor =>
@@ -234,12 +256,16 @@ const Sensors: React.FC = () => {
         )
       })));
 
-      api({
-        method: 'put',
-        url: `/sensors/${editingSensor.id}`,
-        data: newSensor
-      })
-      .then(data => {
+      try {
+        const data = await api({
+          method: 'put',
+          url: `/sensors/${editingSensor.id}`,
+          data: {
+            ...newSensor,
+            criticalThreshold: String(newSensor.criticalThreshold || '')
+          }
+        });
+
         fetchSensor()
         setEditingSensor(null);
         setNewSensor({
@@ -259,11 +285,12 @@ const Sensors: React.FC = () => {
         } else {
           toast.error('Erreur de Connexion');
         }
-      })
-      .catch(error => {
+      } catch (error) {
         console.error('Error:', error);
         toast.error('Erreur lors de la modification du capteur');
-      });
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -289,12 +316,17 @@ const Sensors: React.FC = () => {
     }
   };
 
-  const handleDeleteSensor = (sensorId: string) => {
-    setEquipmentData(equipmentData.map(equipment => ({
-      ...equipment,
-      sensors: equipment.sensors.filter(sensor => sensor.id !== sensorId)
-    })));
-    toast.success('Capteur supprimé avec succès');
+  const handleDeleteSensor = async (sensorId: string) => {
+    try {
+      await api.delete(`/sensors/${sensorId}`);
+      toast.success('Capteur supprimé avec succès');
+      // Recharger la liste des capteurs après suppression
+      await fetchSensor();
+      // Ajuster la pagination si nécessaire (l'effet s'en chargera automatiquement)
+    } catch (error: any) {
+      console.error('Error deleting sensor:', error);
+      toast.error(error.response?.data?.message || 'Erreur lors de la suppression du capteur');
+    }
   };
 
   const toggleSensorStatus = (sensorId: string) => {
@@ -474,6 +506,7 @@ const Sensors: React.FC = () => {
                 setIsAddDialogOpen(open);
                 if (!open) {
                   setEditingSensor(null);
+                  setIsSubmitting(false);
                   setNewSensor({
                     name: '',
                     code: '',
@@ -513,16 +546,20 @@ const Sensors: React.FC = () => {
             }} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="equipment" className="text-sm">Équipement</Label>
-                <Select value={newSensor.equipmentId} onValueChange={(value) => setNewSensor({...newSensor, equipmentId: value})}>
+                <Select value={newSensor.equipmentId || ''} onValueChange={(value) => setNewSensor({...newSensor, equipmentId: value})}>
                   <SelectTrigger className="text-sm sm:text-base">
                     <SelectValue placeholder="Sélectionner un équipement" />
                   </SelectTrigger>
                   <SelectContent>
-                    {equipment.map(equipment => (
-                      <SelectItem key={equipment.id} value={equipment.id}>
-                        {equipment.name} ({equipment.code})
-                      </SelectItem>
-                    ))}
+                    {equipment.length === 0 ? (
+                      <SelectItem value="" disabled>Aucun équipement disponible</SelectItem>
+                    ) : (
+                      equipment.map((equipmentItem) => (
+                        <SelectItem key={equipmentItem.id} value={String(equipmentItem.id)}>
+                          {equipmentItem.name} ({equipmentItem.code})
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -600,6 +637,7 @@ const Sensors: React.FC = () => {
                 <Button type="button" variant="outline" onClick={() => {
                   setIsAddDialogOpen(false);
                   setEditingSensor(null);
+                  setIsSubmitting(false);
                   setNewSensor({
                     name: '',
                     code: '',
@@ -614,8 +652,15 @@ const Sensors: React.FC = () => {
                 }} className="w-full sm:w-auto" size={isMobile ? "sm" : "default"}>
                   Annuler
                 </Button>
-                <Button type="submit" className="w-full sm:w-auto" size={isMobile ? "sm" : "default"}>
-                  {editingSensor ? 'Modifier' : 'Ajouter'}
+                <Button type="submit" className="w-full sm:w-auto" size={isMobile ? "sm" : "default"} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {editingSensor ? 'Modification...' : 'Ajout...'}
+                    </>
+                  ) : (
+                    editingSensor ? 'Modifier' : 'Ajouter'
+                  )}
                 </Button>
               </DialogFooter>
             </form>
