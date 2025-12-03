@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -241,12 +242,23 @@ const Equipment = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (equipmentId: string) => {
-    setEquipment(equipment.filter(eq => eq.id !== equipmentId));
-    toast({
-      title: "Équipement supprimé",
-      description: "L'équipement a été supprimé avec succès.",
-    });
+  const handleDelete = async (equipmentId: string) => {
+    try {
+      await api.delete(`/equipment/${equipmentId}`);
+      toast({
+        title: "Équipement supprimé",
+        description: "L'équipement a été supprimé avec succès.",
+      });
+      // Recharger la liste des équipements après suppression
+      fetchEquipment();
+    } catch (error: any) {
+      console.error('Error deleting equipment:', error);
+      toast({
+        title: "Erreur",
+        description: error.response?.data?.message || "Erreur lors de la suppression de l'équipement.",
+        variant: "destructive",
+      });
+    }
   };
 
   const openCreateDialog = () => {
@@ -681,14 +693,31 @@ const Equipment = () => {
                       >
                         <Edit2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(eq.id)}
-                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="w-[95vw] sm:w-full">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-base sm:text-lg">Supprimer l'équipement</AlertDialogTitle>
+                            <AlertDialogDescription className="text-xs sm:text-sm">
+                              Êtes-vous sûr de vouloir supprimer cet équipement ? Cette action est irréversible.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                            <AlertDialogCancel className="w-full sm:w-auto" onClick={(e) => e.stopPropagation()}>Annuler</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(eq.id)} className="w-full sm:w-auto">
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                   <CardDescription className="text-[10px] sm:text-xs md:text-sm mt-1.5 sm:mt-2 break-words line-clamp-2">{eq.code} - {eq.type}</CardDescription>
@@ -840,14 +869,31 @@ const Equipment = () => {
                               >
                                 <Edit2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDelete(eq.id)}
-                                className="text-destructive hover:text-destructive h-8 w-8 p-0"
-                              >
-                                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="w-[95vw] sm:w-full">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle className="text-base sm:text-lg">Supprimer l'équipement</AlertDialogTitle>
+                                    <AlertDialogDescription className="text-xs sm:text-sm">
+                                      Êtes-vous sûr de vouloir supprimer cet équipement ? Cette action est irréversible.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                                    <AlertDialogCancel className="w-full sm:w-auto" onClick={(e) => e.stopPropagation()}>Annuler</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(eq.id)} className="w-full sm:w-auto">
+                                      Supprimer
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </TableCell>
                         </TableRow>
