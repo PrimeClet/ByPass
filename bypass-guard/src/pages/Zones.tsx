@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, MapPin, Search, LayoutGrid, Table as TableIcon, ArrowLeft } from 'lucide-react';
+import { Plus, Edit2, Trash2, MapPin, Search, LayoutGrid, Table as TableIcon, ArrowLeft, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,9 +15,10 @@ import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbP
 import { useToast } from '@/hooks/use-toast';
 import { getAllZones, getEquipmentByZone } from '@/data/mockEquipment';
 import { Link } from 'react-router-dom';
-import api from '../axios'
+import api from '../axios';
+import { exportToCSV } from '../utils/exportData';
 interface Zone {
-  id: string;
+  id: string | number;
   name: string;
   description: string;
   equipmentCount: number;
@@ -40,11 +42,11 @@ const Zones = () => {
           console.log(response.data);
 
           const formattedZones = response.data.data.map(
-            (zoneName: any, index: number) => ({
-              id: `zone_${index + 1}`,
+            (zoneName: any) => ({
+              id: zoneName.id,
               name: zoneName.name,
-              description: `${zoneName.description.toLowerCase()}`,
-              equipmentCount: zoneName.equipements.length,
+              description: zoneName.description || '',
+              equipmentCount: zoneName.equipements ? zoneName.equipements.length : 0,
             })
           );
 
@@ -161,18 +163,52 @@ const Zones = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (zoneId: string) => {
-    setZones(zones.filter(zone => zone.id !== zoneId));
-    toast({
-      title: "Zone supprimée",
-      description: "La zone a été supprimée avec succès.",
-    });
+  const handleDelete = async (zoneId: string | number) => {
+    try {
+      await api.delete(`/zones/${zoneId}`);
+      toast({
+        title: "Zone supprimée",
+        description: "La zone a été supprimée avec succès.",
+      });
+      // Recharger la liste des zones après suppression
+      fetchZones();
+    } catch (error: any) {
+      console.error('Error deleting zone:', error);
+      toast({
+        title: "Erreur",
+        description: error.response?.data?.message || "Erreur lors de la suppression de la zone.",
+        variant: "destructive",
+      });
+    }
   };
 
   const openCreateDialog = () => {
     setEditingZone(null);
     setFormData({ name: '', description: ''});
     setIsDialogOpen(true);
+  };
+
+  const handleExportData = () => {
+    try {
+      const dataToExport = filteredZones.map(zone => ({
+        'Nom': zone.name,
+        'Description': zone.description || 'N/A',
+        'Nombre d\'équipements': zone.equipmentCount
+      }));
+
+      exportToCSV(dataToExport, `zones_${new Date().toISOString().split('T')[0]}`);
+      toast({
+        title: "Export réussi",
+        description: "Les données ont été exportées avec succès.",
+      });
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      toast({
+        title: "Erreur d'export",
+        description: "Une erreur est survenue lors de l'export des données.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -231,14 +267,25 @@ const Zones = () => {
                 />
               </div>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={openCreateDialog} className="gap-2 w-full sm:w-auto flex-shrink-0 text-sm">
-                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">Nouvelle Zone</span>
-                  <span className="sm:hidden">Nouvelle</span>
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
+              <Button 
+                onClick={handleExportData} 
+                variant="outline"
+                className="gap-2 w-full sm:w-auto flex-shrink-0 text-sm"
+                disabled={filteredZones.length === 0}
+              >
+                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Exporter</span>
+                <span className="sm:hidden">Export</span>
+              </Button>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={openCreateDialog} className="gap-2 w-full sm:w-auto flex-shrink-0 text-sm">
+                    <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Nouvelle Zone</span>
+                    <span className="sm:hidden">Nouvelle</span>
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="text-lg sm:text-xl">
@@ -284,6 +331,7 @@ const Zones = () => {
                 </form>
               </DialogContent>
             </Dialog>
+          </div>
           </div>
         </CardContent>
       </Card>
@@ -388,15 +436,32 @@ const Zones = () => {
                   >
                     <Edit2 className="w-3 h-3" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(zone.id)}
-                    className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                    title="Supprimer"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="w-[95vw] max-w-md">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-base sm:text-lg">Supprimer la zone</AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm">
+                          Êtes-vous sûr de vouloir supprimer la zone "{zone.name}" ? Cette action est irréversible.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                        <AlertDialogCancel className="w-full sm:w-auto text-sm">Annuler</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(zone.id)} className="w-full sm:w-auto text-sm">
+                          Supprimer
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
               <CardDescription className="text-xs line-clamp-2 mt-1.5">{zone.description}</CardDescription>
@@ -474,15 +539,32 @@ const Zones = () => {
                             >
                               <Edit2 className="h-3 w-3 sm:h-4 sm:w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(zone.id)}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                              title="Supprimer"
-                            >
-                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                  title="Supprimer"
+                                >
+                                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="w-[95vw] max-w-md">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle className="text-base sm:text-lg">Supprimer la zone</AlertDialogTitle>
+                                  <AlertDialogDescription className="text-sm">
+                                    Êtes-vous sûr de vouloir supprimer la zone "{zone.name}" ? Cette action est irréversible.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                                  <AlertDialogCancel className="w-full sm:w-auto text-sm">Annuler</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(zone.id)} className="w-full sm:w-auto text-sm">
+                                    Supprimer
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </TableCell>
                       </TableRow>

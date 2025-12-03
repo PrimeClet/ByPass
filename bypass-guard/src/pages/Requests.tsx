@@ -299,15 +299,15 @@ export default function Requests() {
   }
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "En attente": return <Clock className="w-4 h-4" />
-      case "pending": return <Clock className="w-4 h-4" />
-      case "Approuvé": return <CheckCircle className="w-4 h-4" />
-      case "approved": return <CheckCircle className="w-4 h-4" />
-      case "En cours": return <AlertTriangle className="w-4 h-4" />
-      case "in_progress": return <AlertTriangle className="w-4 h-4" />
-      case "Rejeté": return <XCircle className="w-4 h-4" />
-      case "rejected": return <XCircle className="w-4 h-4" />
-      default: return <FileText className="w-4 h-4" />
+      case "En attente": return <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
+      case "pending": return <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
+      case "Approuvé": return <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+      case "approved": return <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+      case "En cours": return <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6" />
+      case "in_progress": return <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6" />
+      case "Rejeté": return <XCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+      case "rejected": return <XCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+      default: return <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
     }
   }
 
@@ -648,7 +648,7 @@ export default function Requests() {
                                 {(request.status === "Approuvé" || request.status === "approved") ? (
                                   <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                                 ) : getStatusIcon(request.status) ? (
-                                  <div className="w-5 h-5 sm:w-6 sm:h-6">
+                                  <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center">
                                     {getStatusIcon(request.status)}
                                   </div>
                                 ) : (
@@ -927,7 +927,7 @@ export default function Requests() {
                                     {(request.status === "Approuvé" || request.status === "approved") ? (
                                       <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                                     ) : getStatusIcon(request.status) ? (
-                                      <div className="w-5 h-5 sm:w-6 sm:h-6">
+                                      <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center">
                                         {getStatusIcon(request.status)}
                                       </div>
                                     ) : (
@@ -1302,7 +1302,7 @@ export default function Requests() {
                                       {(request.status === "Approuvé" || request.status === "approved") ? (
                                         <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                                       ) : getStatusIcon(request.status) ? (
-                                        <div className="w-5 h-5 sm:w-6 sm:h-6">
+                                        <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center">
                                           {getStatusIcon(request.status)}
                                         </div>
                                       ) : (
@@ -1669,7 +1669,7 @@ export default function Requests() {
                                       {(request.status === "Approuvé" || request.status === "approved") ? (
                                         <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                                       ) : getStatusIcon(request.status) ? (
-                                        <div className="w-5 h-5 sm:w-6 sm:h-6">
+                                        <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center">
                                           {getStatusIcon(request.status)}
                                         </div>
                                       ) : (

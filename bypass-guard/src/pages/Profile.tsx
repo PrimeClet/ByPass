@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,27 +7,53 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { User, Mail, Phone, Shield, Calendar, Eye, EyeOff, Save, Edit, Lock, UserCircle, ArrowLeft } from 'lucide-react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
+import { updateUser } from '../store/users';
 import { toast } from 'sonner';
 import api from '../axios';
 import { Link } from 'react-router-dom';
 import { PhoneInputField } from '@/components/ui/phone-input';
 
+// Extraire firstName et lastName depuis full_name
+const extractNames = (fullName: string | undefined) => {
+  if (!fullName) return { firstName: '', lastName: '' };
+  const nameParts = fullName.trim().split(/\s+/);
+  return {
+    firstName: nameParts[0] || '',
+    lastName: nameParts.slice(1).join(' ') || ''
+  };
+};
+
 const Profile: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.user);
+  const dispatch = useDispatch();
   const [isEditing, setIsEditing] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+
   const [formData, setFormData] = useState({
-    full_name: user?.full_name || '',
+    firstName: extractNames(user?.full_name).firstName,
+    lastName: extractNames(user?.full_name).lastName,
     email: user?.email || '',
     phone: user?.phone || '',
-    currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  // Mettre à jour formData quand user change
+  useEffect(() => {
+    if (user) {
+      const names = extractNames(user.full_name);
+      setFormData(prev => ({
+        ...prev,
+        firstName: names.firstName,
+        lastName: names.lastName,
+        email: user.email || prev.email,
+        phone: user.phone || prev.phone,
+      }));
+    }
+  }, [user]);
 
   const getRoleLabel = (role: string) => {
     switch (role) {
@@ -60,8 +86,9 @@ const Profile: React.FC = () => {
       }
 
       // Préparer les données à envoyer
+      const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
       const updateData: any = {
-        full_name: formData.full_name,
+        full_name: fullName,
         email: formData.email,
       };
 
@@ -69,14 +96,8 @@ const Profile: React.FC = () => {
         updateData.phone = formData.phone;
       }
 
-      // Si un nouveau mot de passe est fourni, inclure les mots de passe
+      // Si un nouveau mot de passe est fourni, inclure le mot de passe
       if (formData.newPassword) {
-        if (!formData.currentPassword) {
-          toast.error('Veuillez entrer votre mot de passe actuel');
-          setIsLoading(false);
-          return;
-        }
-        updateData.current_password = formData.currentPassword;
         updateData.password = formData.newPassword;
       }
 
@@ -84,12 +105,17 @@ const Profile: React.FC = () => {
       const response = await api.put(`/users/${user?.id}`, updateData);
       
       if (response.data) {
+        // Mettre à jour le store Redux avec les nouvelles informations
+        dispatch(updateUser({
+          full_name: fullName,
+          email: formData.email,
+          phone: formData.phone || user?.phone || ''
+        }));
         toast.success('Profil mis à jour avec succès');
         setIsEditing(false);
         // Réinitialiser les champs de mot de passe
         setFormData({
           ...formData,
-          currentPassword: '',
           newPassword: '',
           confirmPassword: ''
         });
@@ -106,11 +132,12 @@ const Profile: React.FC = () => {
 
   const handleCancel = () => {
     setIsEditing(false);
+    const names = extractNames(user?.full_name);
     setFormData({
-      full_name: user?.full_name || '',
+      firstName: names.firstName,
+      lastName: names.lastName,
       email: user?.email || '',
       phone: user?.phone || '',
-      currentPassword: '',
       newPassword: '',
       confirmPassword: ''
     });
@@ -227,19 +254,37 @@ const Profile: React.FC = () => {
             </div>
             <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
               <div className="space-y-2 w-full min-w-0">
-                <Label htmlFor="full_name" className="text-xs sm:text-sm">Nom complet</Label>
+                <Label htmlFor="firstName" className="text-xs sm:text-sm">Prénom</Label>
                 {isEditing ? (
                   <Input
-                    id="full_name"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    placeholder="Nom complet"
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    placeholder="Prénom"
                     className="w-full min-w-0 text-sm"
                   />
                 ) : (
                   <div className="flex items-center gap-2 p-2 rounded-md bg-muted min-w-0">
                     <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-xs sm:text-sm truncate">{user.full_name}</span>
+                    <span className="text-xs sm:text-sm truncate">{formData.firstName || '-'}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2 w-full min-w-0">
+                <Label htmlFor="lastName" className="text-xs sm:text-sm">Nom</Label>
+                {isEditing ? (
+                  <Input
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    placeholder="Nom"
+                    className="w-full min-w-0 text-sm"
+                  />
+                ) : (
+                  <div className="flex items-center gap-2 p-2 rounded-md bg-muted min-w-0">
+                    <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs sm:text-sm truncate">{formData.lastName || '-'}</span>
                   </div>
                 )}
               </div>
@@ -335,33 +380,6 @@ const Profile: React.FC = () => {
             {isEditing ? (
               <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                 <div className="space-y-2 w-full min-w-0">
-                  <Label htmlFor="currentPassword" className="text-xs sm:text-sm">Mot de passe actuel</Label>
-                  <div className="relative w-full min-w-0">
-                    <Input
-                      id="currentPassword"
-                      type={showPassword ? 'text' : 'password'}
-                      value={formData.currentPassword}
-                      onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
-                      placeholder="Mot de passe actuel"
-                      className="w-full min-w-0 pr-10 text-sm"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      ) : (
-                        <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2 w-full min-w-0">
                   <Label htmlFor="newPassword" className="text-xs sm:text-sm">Nouveau mot de passe</Label>
                   <div className="relative w-full min-w-0">
                     <Input
@@ -376,7 +394,7 @@ const Profile: React.FC = () => {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
                       onClick={() => setShowNewPassword(!showNewPassword)}
                     >
                       {showNewPassword ? (
@@ -388,7 +406,7 @@ const Profile: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2 col-span-1 sm:col-span-2 w-full min-w-0">
+                <div className="space-y-2 w-full min-w-0">
                   <Label htmlFor="confirmPassword" className="text-xs sm:text-sm">Confirmer le mot de passe</Label>
                   <Input
                     id="confirmPassword"

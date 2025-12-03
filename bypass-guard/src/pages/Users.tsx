@@ -76,10 +76,20 @@ const Users: React.FC = () => {
       lastLogin: new Date()
     };
 
+    // Préparer les données pour l'API (firstName et lastName sont requis)
+    const userData = {
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      email: newUser.email,
+      password: newUser.password,
+      phone: newUser.phone,
+      role: newUser.role,
+    };
+    
     api({
       method: 'post',
       url: '/users',
-      data: newUser
+      data: userData
     })
     .then(data => {
       getUsersList()
@@ -113,12 +123,24 @@ const Users: React.FC = () => {
 
   const handleEditUser = (user: User) => {
     setEditingUser(user);
+    // Extraire firstName et lastName depuis full_name si nécessaire
+    let firstName = user.firstName || '';
+    let lastName = user.lastName || '';
+    
+    if (!firstName && !lastName && user.full_name) {
+      const nameParts = user.full_name.trim().split(/\s+/);
+      if (nameParts.length > 0) {
+        firstName = nameParts[0];
+        lastName = nameParts.slice(1).join(' ') || '';
+      }
+    }
+    
     setNewUser({
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
+      firstName: firstName,
+      lastName: lastName,
       email: user.email,
       role: user.role,
-      full_name: user.full_name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || '',
+      full_name: user.full_name || `${firstName} ${lastName}`.trim() || '',
       department: user.department || '',
       zone: user.zone || '',
       phone: user.phone || '',
@@ -139,10 +161,29 @@ const Users: React.FC = () => {
       ));
       
       
+      // Construire full_name depuis firstName et lastName pour la mise à jour
+      const fullName = `${newUser.firstName || ''} ${newUser.lastName || ''}`.trim();
+      const updateData: any = {
+        username: newUser.username,
+        email: newUser.email,
+        phone: newUser.phone,
+        full_name: fullName || newUser.full_name,
+      };
+      
+      // Ajouter le mot de passe seulement s'il a été modifié
+      if (newUser.password) {
+        updateData.password = newUser.password;
+      }
+      
+      // Ajouter le rôle seulement si c'est un admin
+      if (newUser.role) {
+        updateData.role = newUser.role;
+      }
+      
       api({
         method: 'put',
         url: `/users/${newUser.id}`,
-        data: newUser
+        data: updateData
       })
       .then(data => {
         getUsersList()
@@ -376,14 +417,25 @@ const Users: React.FC = () => {
                 handleAddUser();
               }
             }} className="space-y-3 sm:space-y-4 w-full min-w-0">
-              <div className="grid grid-cols-1 gap-4 w-full min-w-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full min-w-0">
                 <div className="w-full min-w-0">
-                  <Label htmlFor="full_name">Nom complet</Label>
+                  <Label htmlFor="firstName">Prénom</Label>
                   <Input
-                    id="full_name"
-                    value={newUser.full_name}
-                    onChange={(e) => setNewUser({...newUser, full_name: e.target.value})}
-                    placeholder="Nom complet de l'utilisateur"
+                    id="firstName"
+                    value={newUser.firstName}
+                    onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
+                    placeholder="Prénom de l'utilisateur"
+                    required
+                    className="w-full min-w-0"
+                  />
+                </div>
+                <div className="w-full min-w-0">
+                  <Label htmlFor="lastName">Nom</Label>
+                  <Input
+                    id="lastName"
+                    value={newUser.lastName}
+                    onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
+                    placeholder="Nom de l'utilisateur"
                     required
                     className="w-full min-w-0"
                   />
@@ -417,30 +469,32 @@ const Users: React.FC = () => {
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4 w-full min-w-0">
-                <div className="relative w-full min-w-0">
+                <div className="w-full min-w-0">
                   <Label htmlFor="password">Mot de passe</Label>
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                    placeholder="Mot de passe"
-                    required={!editingUser}
-                    className="w-full min-w-0 pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-8 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                      placeholder="Mot de passe"
+                      required={!editingUser}
+                      className="w-full min-w-0 pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4 w-full min-w-0">

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Building2, Search, Filter, LayoutGrid, Table as TableIcon, Shield, ArrowLeft } from 'lucide-react';
+import { Plus, Edit2, Trash2, Building2, Search, Filter, LayoutGrid, Table as TableIcon, Shield, ArrowLeft, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -16,7 +17,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { mockEquipment, getAllZones } from '@/data/mockEquipment';
 import type { Equipment, EquipmentType, EquipmentStatus, CriticalityLevel, Zone } from '@/types/equipment';
 import { Link } from 'react-router-dom';
-import api from '../axios'
+import api from '../axios';
+import { exportToCSV } from '../utils/exportData';
 
 const Equipment = () => {
   const { toast } = useToast();
@@ -86,7 +88,7 @@ const Equipment = () => {
               name: eqs.name,
               code: eqs.code,
               type: eqs.type,
-              zone: eqs.zone.name,
+              zone: eqs.zone?.name || 'N/A',
               fabricant: eqs.fabricant,
               status: eqs.status,
               criticite: eqs.criticite,
@@ -240,12 +242,23 @@ const Equipment = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (equipmentId: string) => {
-    setEquipment(equipment.filter(eq => eq.id !== equipmentId));
-    toast({
-      title: "Équipement supprimé",
-      description: "L'équipement a été supprimé avec succès.",
-    });
+  const handleDelete = async (equipmentId: string) => {
+    try {
+      await api.delete(`/equipment/${equipmentId}`);
+      toast({
+        title: "Équipement supprimé",
+        description: "L'équipement a été supprimé avec succès.",
+      });
+      // Recharger la liste des équipements après suppression
+      fetchEquipment();
+    } catch (error: any) {
+      console.error('Error deleting equipment:', error);
+      toast({
+        title: "Erreur",
+        description: error.response?.data?.message || "Erreur lors de la suppression de l'équipement.",
+        variant: "destructive",
+      });
+    }
   };
 
   const openCreateDialog = () => {
@@ -256,6 +269,34 @@ const Equipment = () => {
       criticite: '' as CriticalityLevel
     });
     setIsDialogOpen(true);
+  };
+
+  const handleExportData = () => {
+    try {
+      const dataToExport = filteredEquipment.map(eq => ({
+        'Code': eq.code,
+        'Nom': eq.name,
+        'Type': eq.type,
+        'Zone': eq.zone,
+        'Fabricant': eq.fabricant || 'N/A',
+        'Statut': eq.status,
+        'Criticité': eq.criticite || 'N/A',
+        'Nombre de capteurs': eq.sensors ? eq.sensors.length : 0
+      }));
+
+      exportToCSV(dataToExport, `equipements_${new Date().toISOString().split('T')[0]}`);
+      toast({
+        title: "Export réussi",
+        description: "Les données ont été exportées avec succès.",
+      });
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      toast({
+        title: "Erreur d'export",
+        description: "Une erreur est survenue lors de l'export des données.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -347,14 +388,26 @@ const Equipment = () => {
                 </Select>
               </div>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={openCreateDialog} className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10" size={isMobile ? "sm" : "default"}>
-                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline truncate">Nouvel Équipement</span>
-                  <span className="sm:hidden truncate">Nouvel</span>
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
+              <Button 
+                onClick={handleExportData} 
+                variant="outline"
+                className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10" 
+                size={isMobile ? "sm" : "default"}
+                disabled={filteredEquipment.length === 0}
+              >
+                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline truncate">Exporter</span>
+                <span className="sm:hidden truncate">Export</span>
+              </Button>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={openCreateDialog} className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10" size={isMobile ? "sm" : "default"}>
+                    <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline truncate">Nouvel Équipement</span>
+                    <span className="sm:hidden truncate">Nouvel</span>
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
                 <DialogHeader>
                   <DialogTitle className="text-base sm:text-lg">
@@ -468,6 +521,7 @@ const Equipment = () => {
                 </form>
               </DialogContent>
             </Dialog>
+          </div>
           </div>
         </CardContent>
       </Card>
@@ -639,14 +693,31 @@ const Equipment = () => {
                       >
                         <Edit2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(eq.id)}
-                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="w-[95vw] sm:w-full">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-base sm:text-lg">Supprimer l'équipement</AlertDialogTitle>
+                            <AlertDialogDescription className="text-xs sm:text-sm">
+                              Êtes-vous sûr de vouloir supprimer cet équipement ? Cette action est irréversible.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                            <AlertDialogCancel className="w-full sm:w-auto" onClick={(e) => e.stopPropagation()}>Annuler</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(eq.id)} className="w-full sm:w-auto">
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                   <CardDescription className="text-[10px] sm:text-xs md:text-sm mt-1.5 sm:mt-2 break-words line-clamp-2">{eq.code} - {eq.type}</CardDescription>
@@ -798,14 +869,31 @@ const Equipment = () => {
                               >
                                 <Edit2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDelete(eq.id)}
-                                className="text-destructive hover:text-destructive h-8 w-8 p-0"
-                              >
-                                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="w-[95vw] sm:w-full">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle className="text-base sm:text-lg">Supprimer l'équipement</AlertDialogTitle>
+                                    <AlertDialogDescription className="text-xs sm:text-sm">
+                                      Êtes-vous sûr de vouloir supprimer cet équipement ? Cette action est irréversible.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                                    <AlertDialogCancel className="w-full sm:w-auto" onClick={(e) => e.stopPropagation()}>Annuler</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(eq.id)} className="w-full sm:w-auto">
+                                      Supprimer
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </TableCell>
                         </TableRow>
