@@ -259,7 +259,7 @@ export function AppSidebar() {
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-lg bg-white flex items-center justify-center px-1">
             {/* <Shield className="w-4 h-4 text-sidebar-primary-foreground" /> */}
-            <img src="logo.png" alt="" />
+            <img src="/logo.png" alt="Logo ByPass Guard" className="w-full h-full object-contain" />
           </div>
           {!collapsed && (
             <div>
