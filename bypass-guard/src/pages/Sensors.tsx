@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Trash2, Search, Settings, Gauge, LayoutGrid, Table as TableIcon, ArrowLeft, Download, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Settings, Gauge, LayoutGrid, Table as TableIcon, ArrowLeft, Download, Loader2, Upload } from 'lucide-react';
 import { mockEquipment } from '@/data/mockEquipment';
 import { Sensor, SensorType, SensorStatus } from '@/types/equipment';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ import { Link } from 'react-router-dom';
 import type { Equipment, EquipmentType, EquipmentStatus, CriticalityLevel, Zone } from '@/types/equipment';
 import api from '../axios';
 import { exportToCSV } from '../utils/exportData';
+import CsvImportDialog from '../components/CsvImportDialog';
 
 // Type étendu pour les sensors avec les informations d'équipement
 type SensorWithEquipment = Sensor & {
@@ -36,6 +37,7 @@ const Sensors: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedEquipment, setSelectedEquipment] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingSensor, setEditingSensor] = useState<SensorWithEquipment | null>(null);
   const [newSensor, setNewSensor] = useState({
     name: '',
@@ -491,10 +493,20 @@ const Sensors: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
-              <Button 
-                onClick={handleExportData} 
+              <Button
+                onClick={() => setIsImportDialogOpen(true)}
                 variant="outline"
-                className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10" 
+                className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10"
+                size={isMobile ? "sm" : "default"}
+              >
+                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline truncate">Importer</span>
+                <span className="sm:hidden truncate">Import</span>
+              </Button>
+              <Button
+                onClick={handleExportData}
+                variant="outline"
+                className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10"
                 size={isMobile ? "sm" : "default"}
                 disabled={filteredSensors.length === 0}
               >
@@ -1125,6 +1137,17 @@ const Sensors: React.FC = () => {
           </Pagination>
         </div>
       )}
+
+      {/* Import CSV Dialog */}
+      <CsvImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        importType="sensors"
+        onImportSuccess={() => {
+          fetchSensor();
+          toast.success('Les capteurs ont été importés avec succès.');
+        }}
+      />
     </div>
   );
 };
