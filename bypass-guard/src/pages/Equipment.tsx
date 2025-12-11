@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Building2, Search, Filter, LayoutGrid, Table as TableIcon, Shield, ArrowLeft, Download, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Building2, Search, Filter, LayoutGrid, Table as TableIcon, Shield, ArrowLeft, Download, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,12 +19,14 @@ import type { Equipment, EquipmentType, EquipmentStatus, CriticalityLevel, Zone 
 import { Link } from 'react-router-dom';
 import api from '../axios';
 import { exportToCSV } from '../utils/exportData';
+import CsvImportDialog from '../components/CsvImportDialog';
 
 const Equipment = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedZone, setSelectedZone] = useState<string>('all');
@@ -414,10 +416,20 @@ const Equipment = () => {
               </div>
             </div>
             <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
-              <Button 
-                onClick={handleExportData} 
+              <Button
+                onClick={() => setIsImportDialogOpen(true)}
                 variant="outline"
-                className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10" 
+                className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10"
+                size={isMobile ? "sm" : "default"}
+              >
+                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline truncate">Importer</span>
+                <span className="sm:hidden truncate">Import</span>
+              </Button>
+              <Button
+                onClick={handleExportData}
+                variant="outline"
+                className="gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0 text-xs sm:text-sm h-9 sm:h-10"
                 size={isMobile ? "sm" : "default"}
                 disabled={filteredEquipment.length === 0}
               >
@@ -1039,6 +1051,20 @@ const Equipment = () => {
           </Pagination>
         </div>
       )}
+
+      {/* Import CSV Dialog */}
+      <CsvImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        importType="equipment"
+        onImportSuccess={() => {
+          fetchEquipment();
+          toast({
+            title: "Import réussi",
+            description: "Les équipements ont été importés avec succès.",
+          });
+        }}
+      />
     </div>
   );
 };

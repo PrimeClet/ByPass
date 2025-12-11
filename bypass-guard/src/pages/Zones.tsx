@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, MapPin, Search, LayoutGrid, Table as TableIcon, ArrowLeft, Download, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, MapPin, Search, LayoutGrid, Table as TableIcon, ArrowLeft, Download, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,8 @@ import { getAllZones, getEquipmentByZone } from '@/data/mockEquipment';
 import { Link } from 'react-router-dom';
 import api from '../axios';
 import { exportToCSV } from '../utils/exportData';
+import CsvImportDialog from '../components/CsvImportDialog';
+
 interface Zone {
   id: string | number;
   name: string;
@@ -98,6 +100,7 @@ const Zones = () => {
   }, [filteredZones.length, itemsPerPage, currentPage]);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -293,8 +296,17 @@ const Zones = () => {
               </div>
             </div>
             <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
-              <Button 
-                onClick={handleExportData} 
+              <Button
+                onClick={() => setIsImportDialogOpen(true)}
+                variant="outline"
+                className="gap-2 w-full sm:w-auto flex-shrink-0 text-sm"
+              >
+                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Importer</span>
+                <span className="sm:hidden">Import</span>
+              </Button>
+              <Button
+                onClick={handleExportData}
                 variant="outline"
                 className="gap-2 w-full sm:w-auto flex-shrink-0 text-sm"
                 disabled={filteredZones.length === 0}
@@ -730,6 +742,20 @@ const Zones = () => {
           </Pagination>
         </div>
       )}
+
+      {/* Import CSV Dialog */}
+      <CsvImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        importType="zones"
+        onImportSuccess={() => {
+          fetchZones();
+          toast({
+            title: "Import réussi",
+            description: "Les zones ont été importées avec succès.",
+          });
+        }}
+      />
     </div>
   );
 };

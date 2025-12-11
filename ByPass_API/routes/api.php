@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CsvImportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\RequestController;
@@ -141,5 +142,27 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::middleware('permission:history.view')->group(function () {
         Route::get('/history', [SystemController::class, 'getHistory']);
+    });
+
+    // Import CSV
+    Route::prefix('import')->group(function () {
+        // Info et templates (accessible à tous les utilisateurs authentifiés)
+        Route::get('/info/{type}', [CsvImportController::class, 'getImportInfo']);
+        Route::get('/template/{type}', [CsvImportController::class, 'downloadTemplate']);
+
+        // Import zones (nécessite permission zones.create)
+        Route::middleware('permission:zones.create')->group(function () {
+            Route::post('/zones', [CsvImportController::class, 'importZones']);
+        });
+
+        // Import équipements (nécessite permission equipment.create)
+        Route::middleware('permission:equipment.create')->group(function () {
+            Route::post('/equipment', [CsvImportController::class, 'importEquipment']);
+        });
+
+        // Import capteurs (nécessite permission sensors.create)
+        Route::middleware('permission:sensors.create')->group(function () {
+            Route::post('/sensors', [CsvImportController::class, 'importSensors']);
+        });
     });
 });
