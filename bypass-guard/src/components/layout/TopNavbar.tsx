@@ -93,20 +93,26 @@ export function TopNavbar() {
         {/* Right section */}
         <div className="flex items-center gap-4">
           {/* Notifications */}
-          <Tinting userId={user?.id} notification={notifications}></Tinting>
+          <Tinting 
+            userId={user?.id} 
+            notification={notifications}
+            onNotificationUpdate={(updatedNotifications) => {
+              setNotifications(updatedNotifications);
+            }}
+          />
 
           {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 h-9 px-3">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+              <Button variant="ghost" className="flex items-center gap-2 h-9 px-2 sm:px-3">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0">
                   <User className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium">{user?.full_name}</p>
-                  <p className="text-xs text-muted-foreground">{user?.role}</p>
+                <div className="text-left hidden sm:block">
+                  <p className="text-sm font-medium truncate max-w-[120px]">{user?.full_name}</p>
+                  <p className="text-xs text-muted-foreground truncate max-w-[120px]">{user?.role}</p>
                 </div>
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                <ChevronDown className="w-4 h-4 text-muted-foreground hidden sm:block" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">

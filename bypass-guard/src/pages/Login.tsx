@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, Eye, EyeOff } from 'lucide-react';
+import { LogIn, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store/store';
@@ -52,59 +52,119 @@ export default function Login() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-
-      api({
+      const res = await api({
         method: 'post',
         url: '/auth/login',
         data: data
-      })
-      .then(res => {
-        console.log('Success:', res.data.data);
-      
-        if (res.data.data.length !== 0) { 
-          dispatch(login({ user: res.data.data.user, token: res.data.data.token }));
-          toast({
-            title: 'Connexion réussie',
-            description: 'Vous êtes maintenant connecté.',
-          });
-          if(res.data.data.user.role === 'user'){
-            return <Navigate to="/requests/new" replace />;
-          }else{
-            return <Navigate to="/" replace />;
-          }
-          
-        } else {
-          console.log('Login failed: ', res.data);
-          toast({
-            title: 'Échec de la connexion',
-            description: 'Email ou mot de passe incorrect.',
-            variant: 'destructive',
-          });
-        }
-      })
-      .catch(error => {
-          console.error('Error:', error);
       });
-      // const success = await login(data.email, data.password);
-      
-    } catch (error) {
+
+      console.log('Success:', res.data.data);
+    
+      if (res.data.data.length !== 0) { 
+        dispatch(login({ user: res.data.data.user, token: res.data.data.token }));
+        toast({
+          title: 'Connexion réussie',
+          description: 'Vous êtes maintenant connecté.',
+        });
+        
+        // Récupérer les notifications après la connexion
+        try {
+          const notificationsResponse = await api.get('/notifications');
+          const allNotifications = notificationsResponse.data || [];
+          
+          // Filtrer les nouvelles notifications (non lues)
+          const newNotifications = allNotifications.filter((notif: any) => !notif.read_at);
+          
+          // Fonction pour obtenir le label de maintenance
+          const getMaintenanceLabel = (key: string): string => {
+            const reasonLabels: Record<string, string> = {
+              preventive_maintenance: 'Maintenance préventive',
+              corrective_maintenance: 'Maintenance corrective',
+              calibration: 'Étalonnage',
+              testing: 'Tests',
+              emergency_repair: 'Réparation d\'urgence',
+              system_upgrade: 'Mise à niveau système',
+              investigation: 'Investigation',
+              other: 'Autre'
+            };
+            return reasonLabels[key] || key;
+          };
+          
+          // Afficher chaque nouvelle notification en pop-up avec un délai entre chaque
+          newNotifications.forEach((notification: any, index: number) => {
+            setTimeout(() => {
+              const title = notification.data?.title 
+                ? getMaintenanceLabel(notification.data.title) 
+                : 'Nouvelle notification';
+              const description = notification.data?.description || 'Vous avez une nouvelle notification';
+              
+              toast({
+                title: title,
+                description: description,
+                duration: 5000, // 5 secondes
+              });
+            }, index * 600); // Délai de 600ms entre chaque notification pour éviter qu'elles se chevauchent
+          });
+        } catch (error) {
+          console.error('Error fetching notifications:', error);
+          // Ne pas bloquer la connexion si la récupération des notifications échoue
+        }
+        
+        if(res.data.data.user.role === 'user'){
+          navigate('/requests/new', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
+      } else {
+        console.log('Login failed: ', res.data);
+        toast({
+          title: 'Échec de la connexion',
+          description: 'Email ou mot de passe incorrect.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+      }
+    } catch (error: any) {
+      console.error('Error:', error);
       toast({
         title: 'Erreur',
-        description: 'Une erreur est survenue lors de la connexion.',
+        description: error.response?.data?.message || 'Une erreur est survenue lors de la connexion.',
         variant: 'destructive',
       });
-    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
-      <Card className="w-full max-w-md shadow-xl border-primary/10">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-6 relative">
+      {/* Loader Overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center gap-6">
+            {/* Logo avec spinner circulaire */}
+            <div className="relative flex items-center justify-center w-32 h-32">
+              {/* Cercle de fond statique */}
+              <div className="absolute inset-0 border-4 border-primary/10 rounded-full"></div>
+              {/* Cercle animé qui tourne */}
+              <div className="absolute inset-0 border-4 border-transparent border-t-primary border-r-primary rounded-full animate-spin" style={{ animationDuration: '1s' }}></div>
+              {/* Logo au centre */}
+              <div className="relative z-10 w-20 h-20 flex items-center justify-center bg-white rounded-xl p-3 shadow-lg">
+                <img src="/logo.png" alt="Logo ByPass Guard" className="w-full h-full object-contain" />
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-medium text-foreground">Connexion en cours...</p>
+              <p className="text-sm text-muted-foreground mt-1">Veuillez patienter</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <Card className={`w-full max-w-md shadow-xl border-primary/10 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
         <CardHeader className="space-y-1 text-center">
           <div className="flex items-center justify-center w-16 h-18 mx-auto mb-4">
             {/* <LogIn className="w-6 h-6 text-primary" /> */}
-            <img src="logo.png" alt="" />
+            <img src="/logo.png" alt="Logo ByPass Guard" />
           </div>
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             Connexion
@@ -126,6 +186,7 @@ export default function Login() {
                       <Input
                         type="text"
                         placeholder="administrateur"
+                        disabled={isLoading}
                         {...field}
                       />
                     </FormControl>
@@ -145,6 +206,7 @@ export default function Login() {
                         <Input
                           type={showPassword ? 'text' : 'password'}
                           placeholder="••••••••"
+                          disabled={isLoading}
                           {...field}
                         />
                         <Button
@@ -153,6 +215,7 @@ export default function Login() {
                           size="sm"
                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                           onClick={() => setShowPassword(!showPassword)}
+                          disabled={isLoading}
                         >
                           {showPassword ? (
                             <EyeOff className="h-4 w-4" />
@@ -172,7 +235,17 @@ export default function Login() {
                 className="w-full"
                 disabled={isLoading}
               >
-                {isLoading ? 'Connexion...' : 'Se connecter'}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Connexion en cours...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Se connecter
+                  </>
+                )}
               </Button>
             </form>
           </Form>

@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { 
   History as HistoryIcon,
   Search,
@@ -22,32 +24,101 @@ import {
   FileText,
   AlertTriangle,
   ArrowLeft,
-  LayoutGrid,
-  Table as TableIcon
 } from "lucide-react"
 import { useLocation, Link } from "react-router-dom"
 import api from '../axios'
+import { useIsMobile } from "@/hooks/use-mobile"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format } from "date-fns"
+import { fr } from "date-fns/locale"
 
 
 export default function History() {
 
   const location = useLocation()
+  const isMobile = useIsMobile()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [dateFilter, setDateFilter] = useState("all")
+  const [customDate, setCustomDate] = useState<Date | undefined>(undefined)
   const [requestList, setRequestList] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(3);
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [isLoading, setIsLoading] = useState(true);
+
+  const getDateRange = (filter: string) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (filter) {
+      case "today":
+        return {
+          start: today,
+          end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1) // Fin de la journée
+        };
+      case "week":
+        // Semaine commence le lundi (jour 1)
+        const startOfWeek = new Date(today);
+        const dayOfWeek = today.getDay(); // 0 = dimanche, 1 = lundi, etc.
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Si dimanche, revenir 6 jours en arrière
+        startOfWeek.setDate(today.getDate() - daysToMonday);
+        startOfWeek.setHours(0, 0, 0, 0);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        return {
+          start: startOfWeek,
+          end: endOfWeek
+        };
+      case "month":
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        return {
+          start: startOfMonth,
+          end: endOfMonth
+        };
+      case "custom":
+        if (customDate) {
+          const start = new Date(customDate);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(customDate);
+          end.setHours(23, 59, 59, 999);
+          return {
+            start,
+            end
+          };
+        }
+        return null;
+      default:
+        return null;
+    }
+  };
 
   const filteredHistory = (requestList ?? []).filter(item => {
-    const matchesSearch = item.equipment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.sensor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.request_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.requester.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = item.equipment?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.sensor?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.request_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.requester?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || item.status === statusFilter
     
-    return matchesSearch && matchesStatus
+    // Filtrage par période
+    let matchesDate = true;
+    if (dateFilter !== "all") {
+      const dateRange = getDateRange(dateFilter);
+      if (dateRange && item.created_at) {
+        const itemDate = new Date(item.created_at);
+        matchesDate = itemDate >= dateRange.start && itemDate <= dateRange.end;
+      } else if (dateFilter === "custom" && !customDate) {
+        // Si le filtre personnalisé est sélectionné mais la date n'est pas sélectionnée, ne pas filtrer
+        matchesDate = true;
+      } else {
+        matchesDate = false;
+      }
+    }
+    
+    return matchesSearch && matchesStatus && matchesDate
   })
 
   // Calcul de la pagination
@@ -59,7 +130,14 @@ export default function History() {
   // Réinitialiser la page quand les filtres ou le nombre d'éléments par page changent
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, dateFilter, itemsPerPage]);
+  }, [searchTerm, statusFilter, dateFilter, customDate, itemsPerPage]);
+
+  // Réinitialiser la date personnalisée quand le filtre change
+  useEffect(() => {
+    if (dateFilter !== "custom") {
+      setCustomDate(undefined);
+    }
+  }, [dateFilter]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -98,17 +176,30 @@ export default function History() {
     }
   }
 
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'director': return 'Approbateur N2'
+      case 'supervisor': return 'Approbateur N1'
+      case 'user': return 'Demandeur'
+      case 'administrator': return 'Administrateur'
+      default: return role || ''
+    }
+  }
+
 
   useEffect(() => {
+    setIsLoading(true);
     api.get('/dashboard/recent-requests')
     .then(response => {
       // Handle successful response
       console.log(response.data); // The fetched data is typically in response.data
-      setRequestList(response.data)    
+      setRequestList(response.data);
+      setIsLoading(false);
     })
     .catch(error => {
       // Handle error
       console.error('Error fetching data:', error);
+      setIsLoading(false);
     });
     
 
@@ -126,44 +217,74 @@ export default function History() {
   }
 
   return (
-    <div className="flex-1 space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Historique des demandes</h1>
-          <p className="text-muted-foreground">
-            Journal d'audit et historique des validations
-          </p>
+    <div className="w-full p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden box-border">
+      {/* Header avec breadcrumb */}
+      <Card className="bg-card rounded-lg border">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              {/* Icône */}
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                <HistoryIcon className="w-6 h-6 text-white" />
+              </div>
+              {/* Titre, description et breadcrumb */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words mb-1">Historique des demandes</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground break-words mb-2">Journal d'audit et historique des validations</p>
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>
+                        <Link to="/">Tableau de bord</Link>
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>Historique</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+            </div>
+            {/* Bouton retour */}
+            <Button variant="outline" size="icon" className="flex-shrink-0 rounded-full w-10 h-10" asChild>
+              <Link to="/">
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            </Button>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Exporter
+        </CardContent>
+      </Card>
+
+      {/* Bouton exporter */}
+      <div className="flex justify-end">
+        <Button variant="outline" size={isMobile ? "sm" : "default"} className="gap-2">
+          <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Exporter</span>
           </Button>
-        </div>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="w-5 h-5" />
+          {/* <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg md:text-xl">
+              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             Filtres de recherche
           </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        </CardHeader> */}
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="relative sm:col-span-2 lg:col-span-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
               <Input
                 placeholder="Rechercher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 w-full text-sm sm:text-base"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full text-sm sm:text-base">
                 <SelectValue placeholder="Statut" />
               </SelectTrigger>
               <SelectContent>
@@ -175,7 +296,7 @@ export default function History() {
               </SelectContent>
             </Select>
             <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full text-sm sm:text-base">
                 <SelectValue placeholder="Période" />
               </SelectTrigger>
               <SelectContent>
@@ -183,30 +304,71 @@ export default function History() {
                 <SelectItem value="today">Aujourd'hui</SelectItem>
                 <SelectItem value="week">Cette semaine</SelectItem>
                 <SelectItem value="month">Ce mois</SelectItem>
+                <SelectItem value="custom">Personnalisée</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={()=>{
+            <Button 
+              variant="outline" 
+              onClick={()=>{
               setSearchTerm("")
               setStatusFilter("all")
               setDateFilter("all")
-            }}>
+              setCustomDate(undefined)
+              }} 
+              className="w-full sm:w-auto text-sm sm:text-base"
+              size={isMobile ? "sm" : "default"}
+            >
               Réinitialiser
             </Button>
           </div>
+          
+          {/* Sélecteur de date personnalisée */}
+          {dateFilter === "custom" && (
+            <div className="mt-4 pt-4 border-t">
+              <div className="space-y-2 max-w-xs">
+                <Label className="text-sm">Sélectionner une date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={`w-full justify-start text-left font-normal text-sm sm:text-base ${
+                        !customDate && "text-muted-foreground"
+                      }`}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {customDate ? (
+                        format(customDate, "PPP", { locale: fr })
+                      ) : (
+                        <span>Sélectionner une date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={customDate}
+                      onSelect={setCustomDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Contrôles de pagination et sélection du nombre d'éléments */}
-      {filteredHistory.length > 0 && (
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="items-per-page">Éléments par page:</Label>
+      {!isLoading && filteredHistory.length > 0 && (
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Label htmlFor="items-per-page" className="text-xs sm:text-sm whitespace-nowrap">Éléments par page:</Label>
               <Select 
                 value={itemsPerPage.toString()} 
                 onValueChange={(value) => setItemsPerPage(Number(value))}
               >
-                <SelectTrigger className="w-24">
+                <SelectTrigger className="w-16 sm:w-20 md:w-24 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -218,226 +380,173 @@ export default function History() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2 border rounded-md p-1">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className="h-8"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'table' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('table')}
-                className="h-8"
-              >
-                <TableIcon className="h-4 w-4" />
-              </Button>
-            </div>
           </div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-xs sm:text-sm text-muted-foreground text-left sm:text-right w-full sm:w-auto">
             Affichage de {startIndex + 1} à {Math.min(endIndex, filteredHistory.length)} sur {filteredHistory.length} demande{filteredHistory.length > 1 ? 's' : ''}
           </div>
         </div>
       )}
 
       {/* History list */}
-      {viewMode === 'grid' ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <HistoryIcon className="w-5 h-5" />
-              Historique ({filteredHistory.length})
-            </CardTitle>
-            <CardDescription>
-              Toutes les demandes traitées
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {paginatedHistory.length === 0 ? (
-                <div className="text-center py-8">
-                  <HistoryIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">
+      {isLoading ? (
+        <div className="space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
+          {Array.from({ length: itemsPerPage }).map((_, index) => (
+            <Card key={index} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
+          <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                  <div className="flex flex-col gap-4 sm:gap-6">
+                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                      {/* Section 1 : Gauche - Skeleton */}
+                      <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                        <Skeleton className="w-10 h-10 sm:w-12 sm:h-12 rounded-full" />
+                        <div className="flex-1 min-w-0">
+                          <Skeleton className="h-5 w-32 mb-2" />
+                          <Skeleton className="h-4 w-20 mb-2" />
+                          <Skeleton className="h-3 w-40 mb-1" />
+                          <Skeleton className="h-3 w-36" />
+                        </div>
+                      </div>
+                      {/* Section 2 : Centre - Skeleton */}
+                      <div className="flex flex-row gap-3 sm:gap-4 flex-1 min-w-0 items-center sm:items-center justify-between flex-wrap">
+                        <Skeleton className="h-3 w-40" />
+                        <Skeleton className="h-3 w-40" />
+                      </div>
+                    </div>
+                    {/* Ligne du bas - Skeleton */}
+                    <div className="flex flex-col gap-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Separator className="my-1" />
+                      <div className="flex flex-row justify-between items-center gap-4">
+                        <Skeleton className="h-3 w-28" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : paginatedHistory.length === 0 ? (
+        <Card className="w-full box-border">
+          <CardContent className="text-center py-6 sm:py-8">
+            <HistoryIcon className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-sm sm:text-base font-semibold mb-2">
                     {requestList.length === 0 ? 'Aucune demande' : 'Aucun résultat'}
                   </h3>
-                  <p className="text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
                     {requestList.length === 0 
                       ? 'Aucune demande dans l\'historique.'
                       : 'Aucune demande ne correspond à vos critères de recherche.'
                     }
                   </p>
-                </div>
-              ) : (
-                paginatedHistory.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                          {getStatusIcon(item.status)}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium">{item.request_code}</span>
-                            <Badge className={getStatusColor(item.status)}>
-                              {item.status}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{item.equipment.name}</p>
-                          <p className="text-xs text-muted-foreground">{item.sensor.name}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-3 text-sm">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <User className="w-4 h-4" />
-                          <span>Demandeur:</span>
-                        </div>
-                        <p>{item.requester.full_name}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Calendar className="w-4 h-4" />
-                          <span>Demande:</span>
-                        </div>
-                        <p>
-                        {new Date(item.created_at).toLocaleString("fr-FR", {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            })}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Validation:</span>
-                        </div>
-                        <p>
-                        {new Date(item.validated_at).toLocaleString("fr-FR", {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            })}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 pt-3 border-t">
-                      <div className="flex items-center justify-between text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Validateur: </span>
-                          <span className="font-medium">{item.validator?.full_name}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Durée: </span>
-                          <span className="font-medium">{diffInHours(item.end_time, item.start_time)} Heures</span>
-                        </div>
-                      </div>
-                      {item.comments && (
-                        <div className="mt-2">
-                          <span className="text-muted-foreground text-xs">Commentaires: </span>
-                          <p className="text-xs text-muted-foreground italic">{item.commentaires}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <HistoryIcon className="w-5 h-5" />
-              Historique ({filteredHistory.length})
-            </CardTitle>
-            <CardDescription>
-              Toutes les demandes traitées
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Équipement</TableHead>
-                  <TableHead>Capteur</TableHead>
-                  <TableHead>Demandeur</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Date demande</TableHead>
-                  <TableHead>Date validation</TableHead>
-                  <TableHead>Validateur</TableHead>
-                  <TableHead>Durée</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedHistory.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
-                      <HistoryIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">
-                        {requestList.length === 0 ? 'Aucune demande' : 'Aucun résultat'}
-                      </h3>
-                      <p className="text-muted-foreground">
-                        {requestList.length === 0 
-                          ? 'Aucune demande dans l\'historique.'
-                          : 'Aucune demande ne correspond à vos critères de recherche.'
-                        }
+        <div className="space-y-3 sm:space-y-4 md:space-y-6 w-full min-w-0">
+          {paginatedHistory.map((item) => (
+            <Card key={item.id} className="hover:shadow-lg transition-shadow w-full min-w-0 box-border">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col gap-4 sm:gap-6">
+                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+                    {/* Section 1 : Gauche - Icône + Code + Badges + Equipement/Capteur */}
+                    <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                      {/* Icône circulaire avec status */}
+                      <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-100 flex-shrink-0">
+                        <div className="text-blue-600">
+                          {(item.status === "Approuvé" || item.status === "approved") ? (
+                            <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+                          ) : getStatusIcon(item.status) ? (
+                            <div className="w-5 h-5 sm:w-6 sm:h-6">
+                              {getStatusIcon(item.status)}
+                </div>
+              ) : (
+                            <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
+                          )}
+                        </div>
+                      </div>
+                      {/* Code de demande et badges */}
+                        <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap mb-2">
+                          <CardTitle className="text-base sm:text-lg font-bold truncate min-w-0">
+                            {item.request_code}
+                          </CardTitle>
+                          <Badge className={getStatusColor(item.status) + " text-xs whitespace-nowrap flex-shrink-0"}>
+                            {item.status}
+                            </Badge>
+                          </div>
+                        {/* Équipement et capteur sur deux lignes */}
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground truncate">
+                            {item.equipment?.name || 'N/A'}
+                          </p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {item.sensor?.name || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 2 : Centre - Date demande + Date validation */}
+                    <div className="flex flex-row gap-3 sm:gap-4 flex-1 min-w-0 items-center sm:items-center justify-between flex-wrap">
+                      <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                        Demande: {new Date(item.created_at).toLocaleString("fr-FR", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                            })}
+                        </p>
+                      {item.validated_at && (
+                        <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                          Validation: {new Date(item.validated_at).toLocaleString("fr-FR", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Ligne du bas : Demandeur puis Validateur et Durée sur la même ligne */}
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm font-semibold text-left">
+                      {item.requester?.role && getRoleLabel(item.requester.role) && (
+                        <span className="text-muted-foreground font-normal">{getRoleLabel(item.requester.role)}: </span>
+                      )}
+                      {item.requester?.full_name || 'N/A'}
+                    </p>
+                    <Separator className="my-1" />
+                    <div className="flex flex-row justify-between items-center gap-4">
+                      {item.validator?.full_name && (
+                        <p className="text-xs sm:text-sm text-muted-foreground text-left">
+                          {item.validator?.role && getRoleLabel(item.validator.role) && (
+                            <span>{getRoleLabel(item.validator.role)}: </span>
+                          )}
+                          {item.validator.full_name}
+                        </p>
+                      )}
+                      <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap text-right ml-auto">
+                        Durée: {Math.round(diffInHours(item.end_time, item.start_time))} Heure{Math.round(diffInHours(item.end_time, item.start_time)) > 1 ? 's' : ''}
                       </p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedHistory.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">
-                        {item.request_code}
-                      </TableCell>
-                      <TableCell>{item.equipment.name}</TableCell>
-                      <TableCell>{item.sensor.name}</TableCell>
-                      <TableCell>{item.requester.full_name}</TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(item.status)}>
-                          {item.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(item.created_at).toLocaleString("fr-FR", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(item.validated_at).toLocaleString("fr-FR", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </TableCell>
-                      <TableCell>{item.validator?.full_name || 'N/A'}</TableCell>
-                      <TableCell>
-                        {diffInHours(item.end_time, item.start_time)} Heures
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                    </div>
+                  </div>
+            </div>
           </CardContent>
         </Card>
+          ))}
+        </div>
       )}
 
       {/* Pagination */}
       {filteredHistory.length > 0 && totalPages > 1 && (
-        <div className="flex justify-end items-center mt-6 float-right">
+        <div className="flex justify-center sm:justify-end items-center mt-4 sm:mt-6 w-full">
           <Pagination>
-            <PaginationContent>
+            <PaginationContent className="flex-wrap gap-1 sm:gap-2">
               <PaginationItem>
                 <PaginationPrevious 
                   href="#"
@@ -450,7 +559,39 @@ export default function History() {
                   className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                 />
               </PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((page) => {
+                  // Sur mobile, afficher seulement la page actuelle et les pages adjacentes
+                  if (isMobile) {
+                    return page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+                  }
+                  return true;
+                })
+                .map((page, index, array) => {
+                  // Ajouter des ellipses sur mobile si nécessaire
+                  if (isMobile && index > 0 && page - array[index - 1] > 1) {
+                    return (
+                      <React.Fragment key={`ellipsis-${page}`}>
+                        <PaginationItem>
+                          <span className="px-2 text-muted-foreground">...</span>
+                        </PaginationItem>
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(page);
+                            }}
+                            isActive={currentPage === page}
+                            className="cursor-pointer text-xs sm:text-sm"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      </React.Fragment>
+                    );
+                  }
+                  return (
                 <PaginationItem key={page}>
                   <PaginationLink
                     href="#"
@@ -459,12 +600,13 @@ export default function History() {
                       setCurrentPage(page);
                     }}
                     isActive={currentPage === page}
-                    className="cursor-pointer"
+                        className="cursor-pointer text-xs sm:text-sm min-w-[2rem] sm:min-w-[2.5rem]"
                   >
                     {page}
                   </PaginationLink>
                 </PaginationItem>
-              ))}
+                  );
+                })}
               <PaginationItem>
                 <PaginationNext 
                   href="#"
@@ -482,5 +624,5 @@ export default function History() {
         </div>
       )}
     </div>
-  )
+  );
 }

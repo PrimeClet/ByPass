@@ -12,7 +12,8 @@ import {
   ChevronDown,
   Users,
   Activity,
-  Key
+  Key,
+  UserCircle
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
@@ -90,17 +91,13 @@ const adminItems = [
     badge: null,
     role: ['administrator']
   },
+]
+
+const userRoleItems = [
   {
     title: "Utilisateurs",
     url: "/users",
     icon: Users,
-    badge: null,
-    role: ['administrator']
-  },
-  {
-    title: "Paramètres",
-    url: "/settings",
-    icon: Settings,
     badge: null,
     role: ['administrator']
   },
@@ -113,8 +110,32 @@ const adminItems = [
   },
 ]
 
+const settingsItems = [
+  {
+    title: "Paramètres",
+    url: "/settings",
+    icon: Settings,
+    badge: null,
+    role: ['administrator']
+  },
+  {
+    title: "Mon profil",
+    url: "/profile",
+    icon: UserCircle,
+    badge: null,
+    role: ['administrator', 'supervisor', 'user', 'director']
+  },
+  {
+    title: "Conditions d'utilisation",
+    url: "/terms",
+    icon: FileText,
+    badge: null,
+    role: ['administrator', 'supervisor', 'user', 'director']
+  },
+]
+
 export function AppSidebar() {
-  const { state } = useSidebar()
+  const { state, setOpen, setOpenMobile, isMobile } = useSidebar()
   const collapsed = state === "collapsed"
   const location = useLocation()
   const currentPath = location.pathname
@@ -125,6 +146,29 @@ export function AppSidebar() {
 
   const dispatch = useDispatch<AppDispatch>();
   const { users, loading, error, user, token } = useSelector((state: RootState) => state.user);
+
+  // Détecter les écrans moyens (entre 768px et 1024px)
+  const [isMediumScreen, setIsMediumScreen] = useState(false)
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const width = window.innerWidth
+      setIsMediumScreen(width >= 768 && width < 1024)
+    }
+
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+    return () => window.removeEventListener('resize', checkScreenSize)
+  }, [])
+
+  // Fonction pour fermer la sidebar sur les écrans moyens
+  const handleLinkClick = () => {
+    if (isMediumScreen && !isMobile) {
+      setOpen(false)
+    } else if (isMobile) {
+      setOpenMobile(false)
+    }
+  }
   
 
   const menuItems = [
@@ -159,20 +203,39 @@ export function AppSidebar() {
   ]
 
   useEffect(() => {
-    if(user.role !== 'user'){
-      api.get('/requests/pending')
-      .then(response => {
-        // Handle successful response
-        // console.log(response.data); // The fetched data is typically in response.data
-        setValidateValue(response.data.data.length)    
-      })
-      .catch(error => {
-        // Handle error
-        console.error('Error fetching data:', error);
-      });
-    }
+    // Fonction pour récupérer le nombre de demandes en attente
+    const fetchPendingCount = () => {
+      if(user && user.role !== 'user'){
+        api.get('/requests/pending')
+        .then(response => {
+          // Handle successful response
+          // La réponse peut être un tableau directement ou un objet paginé
+          let count = 0;
+          if (Array.isArray(response.data)) {
+            count = response.data.length;
+          } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+            count = response.data.data.length;
+          }
+          setValidateValue(count);
+        })
+        .catch(error => {
+          // Handle error
+          console.error('Error fetching pending requests count:', error);
+          setValidateValue(0);
+        });
+      } else {
+        setValidateValue(0);
+      }
+    };
 
-  }, [location.key])
+    // Récupérer immédiatement
+    fetchPendingCount();
+    
+    // Puis toutes les 30 secondes pour mettre à jour le compteur
+    const interval = setInterval(fetchPendingCount, 30000);
+    
+    return () => clearInterval(interval);
+  }, [location.key, user])
 
 
   const isActive = (path: string) => currentPath === path
@@ -196,7 +259,7 @@ export function AppSidebar() {
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-lg bg-white flex items-center justify-center px-1">
             {/* <Shield className="w-4 h-4 text-sidebar-primary-foreground" /> */}
-            <img src="logo.png" alt="" />
+            <img src="/logo.png" alt="Logo ByPass Guard" className="w-full h-full object-contain" />
           </div>
           {!collapsed && (
             <div>
@@ -236,10 +299,12 @@ export function AppSidebar() {
                       {expandedGroups.demandes && !collapsed && (
                         <div className="ml-4 space-y-1 border-l border-sidebar-border/30 pl-4">
                           {item.items.map((subItem) => (
-                            <SidebarMenuButton key={subItem.url} asChild>
+                            <SidebarMenuButton key={subItem.url} asChild isActive={currentPath === subItem.url}>
                               <NavLink 
                                 to={subItem.url} 
                                 className={({ isActive }) => getNavClass(isActive)}
+                                onClick={handleLinkClick}
+                                end
                               >
                                 <subItem.icon className="w-4 h-4" />
                                 <span className="text-sm">{subItem.title}</span>
@@ -255,10 +320,12 @@ export function AppSidebar() {
                       )}
                     </div>
                   ) : (
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild isActive={currentPath === item.url || (item.url === '/' ? currentPath === '/' : false)}>
                       <NavLink 
                         to={item.url} 
                         className={({ isActive }) => getNavClass(isActive)}
+                        onClick={handleLinkClick}
+                        end={item.url === '/'}
                       >
                         <item.icon className="w-4 h-4" />
                         {!collapsed && (
@@ -283,7 +350,7 @@ export function AppSidebar() {
         {
           (user.role === 'administrator') &&
 
-          <SidebarGroup className="mt-8">
+          <SidebarGroup className="mt-4">
           <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs font-medium uppercase tracking-wider">
             Administration
           </SidebarGroupLabel>
@@ -293,10 +360,12 @@ export function AppSidebar() {
               .filter((item) => item.role.includes(user.role))
               .map((item) => (
                 <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild isActive={currentPath === item.url}>
                     <NavLink 
                       to={item.url} 
                       className={({ isActive }) => getNavClass(isActive)}
+                      onClick={handleLinkClick}
+                      end
                     >
                       <item.icon className="w-4 h-4" />
                       {!collapsed && (
@@ -317,6 +386,82 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       }
+
+      {
+        (user.role === 'administrator') &&
+
+        <SidebarGroup className="mt-4">
+          <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs font-medium uppercase tracking-wider">
+            Utilisateurs et accès
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {userRoleItems
+              .filter((item) => item.role.includes(user.role))
+              .map((item) => (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton asChild isActive={currentPath === item.url}>
+                    <NavLink 
+                      to={item.url} 
+                      className={({ isActive }) => getNavClass(isActive)}
+                      onClick={handleLinkClick}
+                      end
+                    >
+                      <item.icon className="w-4 h-4" />
+                      {!collapsed && (
+                        <>
+                          <span className="text-sm">{item.title}</span>
+                          {item.badge && (
+                            <Badge variant="secondary" className="ml-auto text-xs">
+                              {item.badge}
+                            </Badge>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      }
+
+      <SidebarGroup className="mt-4">
+        <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs font-medium uppercase tracking-wider">
+          Compte et paramètres
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu className="space-y-1">
+            {settingsItems
+            .filter((item) => item.role.includes(user.role))
+            .map((item) => (
+              <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton asChild isActive={currentPath === item.url}>
+                  <NavLink 
+                    to={item.url} 
+                    className={({ isActive }) => getNavClass(isActive)}
+                    onClick={handleLinkClick}
+                    end
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {!collapsed && (
+                      <>
+                        <span className="text-sm">{item.title}</span>
+                        {item.badge && (
+                          <Badge variant="secondary" className="ml-auto text-xs">
+                            {item.badge}
+                          </Badge>
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border/50 p-4">

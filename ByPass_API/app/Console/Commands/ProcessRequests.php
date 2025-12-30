@@ -77,7 +77,7 @@ class ProcessRequests extends Command
             foreach ($responsibleUsers as $user) {
                 $phone = ltrim($user->phone, '+');
                 $message = "📌 *Notification : Demande annulée*\n" .
-                        "📝 Titre : {$request->title}\n" .
+                        "📝 Titre : {$this->getReasonLabel($request->title)}\n".
                         "⚡ Priorité : {$request->priority}\n" .
                         "📅 Date limite : " . $request->end_time->format('d/m/Y H:i') . "\n" .
                         "🔍 Statut : Annulée automatiquement car la date limite a été dépassée.";
@@ -87,6 +87,22 @@ class ProcessRequests extends Command
         }
         $this->info('Traitement des requêtes terminé.');
     
+    }
+
+    private function getReasonLabel(string $key): string
+    {
+        $reasonLabels = [
+            'preventive_maintenance' => 'Maintenance préventive',
+            'corrective_maintenance' => 'Maintenance corrective',
+            'calibration' => 'Étalonnage',
+            'testing' => 'Tests',
+            'emergency_repair' => 'Réparation d\'urgence',
+            'system_upgrade' => 'Mise à niveau système',
+            'investigation' => 'Investigation',
+            'other' => 'Autre'
+        ];
+
+        return $reasonLabels[$key] ?? $key;
     }
 
     private function sendWhatsAppMessage($to, $text)

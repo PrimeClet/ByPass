@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CalendarIcon, AlertTriangle, FileText, Clock, Shield } from 'lucide-react';
+import { CalendarIcon, AlertTriangle, FileText, Clock, Shield, Loader2 } from 'lucide-react';
 import { Equipment, Sensor } from '@/types/equipment';
 import { BypassReason, UrgencyLevel, RiskLevel } from '@/types/request';
 import { getCurrentUser } from '@/data/mockUsers';
@@ -35,7 +35,7 @@ const requestSchema = z.object({
   operationalImpact: z.enum(['very_low', 'low', 'medium', 'high', 'very_high']),
   environmentalImpact: z.enum(['very_low', 'low', 'medium', 'high', 'very_high']),
   mitigationMeasures: z.array(z.string()).min(1, 'Au moins une mesure d\'atténuation requise'),
-  contingencyPlan: z.string().optional(),
+  contingencyPlan: z.string().optional().transform(val => val === '' ? undefined : val),
   acknowledgeSafety: z.boolean().refine(val => val === true, 'Vous devez accepter les conditions de sécurité'),
   acknowledgeResponsibility: z.boolean().refine(val => val === true, 'Vous devez accepter la responsabilité')
 });
@@ -57,12 +57,13 @@ export const BypassRequestForm = () => {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
     setValue,
     watch,
     reset
   } = useForm<RequestFormData>({
     resolver: zodResolver(requestSchema),
+    mode: 'onChange',
     defaultValues: {
       mitigationMeasures: [],
       urgencyLevel: 'normal',
@@ -111,11 +112,11 @@ export const BypassRequestForm = () => {
               name: eqs.name,
               code: eqs.code,
               type: eqs.type,
-              zone: eqs.zone.name,
+              zone: eqs.zone?.name || 'N/A',
               fabricant: eqs.fabricant,
               status: eqs.status,
               criticite: eqs.criticite,
-              sensors: eqs.sensors.map(
+              sensors: eqs.sensors?.map(
                 (sensor) => ({
                     id: sensor.id,
                     equipmentId: sensor.equipment_id,
@@ -128,7 +129,7 @@ export const BypassRequestForm = () => {
                     lastCalibration: new Date(sensor.Dernier_Etallonnage),
                     isActive: (sensor.status === 'active' ? true : false)
                 })
-              )
+              ) || []
             })
           );
 
@@ -204,25 +205,26 @@ export const BypassRequestForm = () => {
 
   const onSubmit = async (data: RequestFormData) => {
     try {
-      // Simulate API call
-      api({
+      // Transformer les chaînes vides en null pour les champs optionnels
+      const submitData = {
+        ...data,
+        contingencyPlan: data.contingencyPlan && data.contingencyPlan.trim() !== '' ? data.contingencyPlan : null,
+        maintenanceWorkOrder: data.maintenanceWorkOrder && data.maintenanceWorkOrder.trim() !== '' ? data.maintenanceWorkOrder : null,
+      };
+      
+      await api({
         method: 'post',
         url: `/requests`,
-        data: data
-      })
-      .then(data => {
-        if (data) {
-          toast.success("Demande de Bypass Soumis avec Succes");
-        } else {
-          toast.error("Probleme de connexion");
-        }
-      })
+        data: submitData
+      });
+      toast.success("Demande de Bypass Soumis avec Succes");
       reset();
       setSelectedZone('');
       setSelectedEquipment(null);
       setSelectedSensor(null);
     } catch (error) {
       console.error('Erreur lors de la soumission:', error);
+      toast.error("Erreur lors de la soumission de la demande");
     }
   };
 
@@ -320,7 +322,7 @@ export const BypassRequestForm = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {availableEquipment.map(equipment => (
-                      <SelectItem key={equipment.id} value={equipment.id}>
+                      <SelectItem key={equipment.id} value={equipment.id} disabled={equipment.status !== 'operational'}>
                         <div className="flex items-center space-x-2">
                           <span>{equipment.name}</span>
                           <Badge variant="outline">{equipment.code}</Badge>
@@ -373,7 +375,7 @@ export const BypassRequestForm = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {availableSensors.map(sensor => (
-                    <SelectItem key={sensor.id} value={sensor.id}>
+                    <SelectItem key={sensor.id} value={sensor.id} disabled={sensor.status !== 'active'}>
                       <div className="flex items-center space-x-2">
                         <span>{sensor.name}</span>
                         <Badge variant="outline">{sensor.code}</Badge>
@@ -672,10 +674,17 @@ export const BypassRequestForm = () => {
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={!isValid || isSubmitting}
               className="min-w-[120px]"
             >
-              {isSubmitting ? 'Soumission...' : 'Soumettre la demande'}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Soumission...
+                </>
+              ) : (
+                'Soumettre la demande'
+              )}
             </Button>
           </div>
         </form>

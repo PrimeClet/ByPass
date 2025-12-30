@@ -8,7 +8,8 @@ export type user = {
     email: string,
     full_name: string,
     role: string,
-    is_active: number
+    is_active: number,
+    phone: string
 }
 
 // Define a type for the slice state
@@ -64,6 +65,11 @@ export const UserSlice = createSlice({
     setUsers: (state, action: PayloadAction<user[]>) => {
         state.users = action.payload;
     },
+    updateUser: (state, action: PayloadAction<Partial<user>>) => {
+        if (state.user) {
+            state.user = { ...state.user, ...action.payload };
+        }
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchUsers.pending, (state) => {
@@ -81,7 +87,7 @@ export const UserSlice = createSlice({
   },
 })
 
-export const { login, logout, setUsers } = UserSlice.actions
+export const { login, logout, setUsers, updateUser } = UserSlice.actions
 
 // Other code such as selectors can use the imported `RootState` type
 // export const selectCount = (state: RootState) => state.counter.value

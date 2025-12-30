@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/zone_provider.dart';
 import '../models/equipment.dart';
 import '../widgets/loading_widget.dart';
-import '../widgets/error_widget.dart';
+import '../widgets/custom_error_widget.dart';
 import '../widgets/empty_state_widget.dart';
 
 class ZonesScreen extends StatefulWidget {
@@ -35,7 +35,7 @@ class _ZonesScreenState extends State<ZonesScreen> {
           }
 
           if (provider.errorMessage != null) {
-            return ErrorWidget(
+            return CustomErrorWidget(
               message: provider.errorMessage!,
               onRetry: () => provider.loadZones(),
             );
