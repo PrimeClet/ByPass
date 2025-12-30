@@ -66,6 +66,50 @@ export default function Login() {
           title: 'Connexion réussie',
           description: 'Vous êtes maintenant connecté.',
         });
+        
+        // Récupérer les notifications après la connexion
+        try {
+          const notificationsResponse = await api.get('/notifications');
+          const allNotifications = notificationsResponse.data || [];
+          
+          // Filtrer les nouvelles notifications (non lues)
+          const newNotifications = allNotifications.filter((notif: any) => !notif.read_at);
+          
+          // Fonction pour obtenir le label de maintenance
+          const getMaintenanceLabel = (key: string): string => {
+            const reasonLabels: Record<string, string> = {
+              preventive_maintenance: 'Maintenance préventive',
+              corrective_maintenance: 'Maintenance corrective',
+              calibration: 'Étalonnage',
+              testing: 'Tests',
+              emergency_repair: 'Réparation d\'urgence',
+              system_upgrade: 'Mise à niveau système',
+              investigation: 'Investigation',
+              other: 'Autre'
+            };
+            return reasonLabels[key] || key;
+          };
+          
+          // Afficher chaque nouvelle notification en pop-up avec un délai entre chaque
+          newNotifications.forEach((notification: any, index: number) => {
+            setTimeout(() => {
+              const title = notification.data?.title 
+                ? getMaintenanceLabel(notification.data.title) 
+                : 'Nouvelle notification';
+              const description = notification.data?.description || 'Vous avez une nouvelle notification';
+              
+              toast({
+                title: title,
+                description: description,
+                duration: 5000, // 5 secondes
+              });
+            }, index * 600); // Délai de 600ms entre chaque notification pour éviter qu'elles se chevauchent
+          });
+        } catch (error) {
+          console.error('Error fetching notifications:', error);
+          // Ne pas bloquer la connexion si la récupération des notifications échoue
+        }
+        
         if(res.data.data.user.role === 'user'){
           navigate('/requests/new', { replace: true });
         } else {

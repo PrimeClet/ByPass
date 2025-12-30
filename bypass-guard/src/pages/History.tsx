@@ -28,6 +28,10 @@ import {
 import { useLocation, Link } from "react-router-dom"
 import api from '../axios'
 import { useIsMobile } from "@/hooks/use-mobile"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format } from "date-fns"
+import { fr } from "date-fns/locale"
 
 
 export default function History() {
@@ -37,19 +41,84 @@ export default function History() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [dateFilter, setDateFilter] = useState("all")
+  const [customDate, setCustomDate] = useState<Date | undefined>(undefined)
   const [requestList, setRequestList] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const [isLoading, setIsLoading] = useState(true);
 
+  const getDateRange = (filter: string) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (filter) {
+      case "today":
+        return {
+          start: today,
+          end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1) // Fin de la journée
+        };
+      case "week":
+        // Semaine commence le lundi (jour 1)
+        const startOfWeek = new Date(today);
+        const dayOfWeek = today.getDay(); // 0 = dimanche, 1 = lundi, etc.
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Si dimanche, revenir 6 jours en arrière
+        startOfWeek.setDate(today.getDate() - daysToMonday);
+        startOfWeek.setHours(0, 0, 0, 0);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        return {
+          start: startOfWeek,
+          end: endOfWeek
+        };
+      case "month":
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        return {
+          start: startOfMonth,
+          end: endOfMonth
+        };
+      case "custom":
+        if (customDate) {
+          const start = new Date(customDate);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(customDate);
+          end.setHours(23, 59, 59, 999);
+          return {
+            start,
+            end
+          };
+        }
+        return null;
+      default:
+        return null;
+    }
+  };
+
   const filteredHistory = (requestList ?? []).filter(item => {
-    const matchesSearch = item.equipment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.sensor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.request_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.requester.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = item.equipment?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.sensor?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.request_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.requester?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || item.status === statusFilter
     
-    return matchesSearch && matchesStatus
+    // Filtrage par période
+    let matchesDate = true;
+    if (dateFilter !== "all") {
+      const dateRange = getDateRange(dateFilter);
+      if (dateRange && item.created_at) {
+        const itemDate = new Date(item.created_at);
+        matchesDate = itemDate >= dateRange.start && itemDate <= dateRange.end;
+      } else if (dateFilter === "custom" && !customDate) {
+        // Si le filtre personnalisé est sélectionné mais la date n'est pas sélectionnée, ne pas filtrer
+        matchesDate = true;
+      } else {
+        matchesDate = false;
+      }
+    }
+    
+    return matchesSearch && matchesStatus && matchesDate
   })
 
   // Calcul de la pagination
@@ -61,7 +130,14 @@ export default function History() {
   // Réinitialiser la page quand les filtres ou le nombre d'éléments par page changent
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, dateFilter, itemsPerPage]);
+  }, [searchTerm, statusFilter, dateFilter, customDate, itemsPerPage]);
+
+  // Réinitialiser la date personnalisée quand le filtre change
+  useEffect(() => {
+    if (dateFilter !== "custom") {
+      setCustomDate(undefined);
+    }
+  }, [dateFilter]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -228,6 +304,7 @@ export default function History() {
                 <SelectItem value="today">Aujourd'hui</SelectItem>
                 <SelectItem value="week">Cette semaine</SelectItem>
                 <SelectItem value="month">Ce mois</SelectItem>
+                <SelectItem value="custom">Personnalisée</SelectItem>
               </SelectContent>
             </Select>
             <Button 
@@ -236,6 +313,7 @@ export default function History() {
               setSearchTerm("")
               setStatusFilter("all")
               setDateFilter("all")
+              setCustomDate(undefined)
               }} 
               className="w-full sm:w-auto text-sm sm:text-base"
               size={isMobile ? "sm" : "default"}
@@ -243,6 +321,40 @@ export default function History() {
               Réinitialiser
             </Button>
           </div>
+          
+          {/* Sélecteur de date personnalisée */}
+          {dateFilter === "custom" && (
+            <div className="mt-4 pt-4 border-t">
+              <div className="space-y-2 max-w-xs">
+                <Label className="text-sm">Sélectionner une date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={`w-full justify-start text-left font-normal text-sm sm:text-base ${
+                        !customDate && "text-muted-foreground"
+                      }`}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {customDate ? (
+                        format(customDate, "PPP", { locale: fr })
+                      ) : (
+                        <span>Sélectionner une date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={customDate}
+                      onSelect={setCustomDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

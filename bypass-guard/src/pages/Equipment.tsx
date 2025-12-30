@@ -37,6 +37,7 @@ const Equipment = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>(isMobile ? 'grid' : 'grid');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState({ 
     name: '',
@@ -171,8 +172,40 @@ const Equipment = () => {
     }
   }, [filteredEquipment.length, itemsPerPage, currentPage]);
 
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Le nom est requis';
+    }
+    if (!formData.type) {
+      errors.type = 'Le type est requis';
+    }
+    if (!formData.zone) {
+      errors.zone = 'La zone est requise';
+    }
+    if (!formData.fabricant.trim()) {
+      errors.fabricant = 'Le fabricant est requis';
+    }
+    if (!formData.status) {
+      errors.status = 'Le statut est requis';
+    }
+    if (!formData.criticite) {
+      errors.criticite = 'La criticité est requise';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Valider le formulaire avant la soumission
+    if (!validateForm()) {
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -183,10 +216,21 @@ const Equipment = () => {
             : eq
         ));
 
+        // Filtrer les champs vides avant l'envoi
+        const dataToSend = {
+          name: formData.name.trim(),
+          type: formData.type,
+          zone: formData.zone,
+          fabricant: formData.fabricant.trim(),
+          status: formData.status,
+          criticite: formData.criticite,
+          ...(formData.model && { model: formData.model.trim() })
+        };
+        
         const data = await api({
           method: 'put',
           url: `/equipment/${editingEquipment.id}`,
-          data: formData
+          data: dataToSend
         });
 
         await fetchEquipment();
@@ -212,10 +256,21 @@ const Equipment = () => {
 
         setEquipment([...equipment, newEquipment]);
         
+        // Filtrer les champs vides avant l'envoi
+        const dataToSend = {
+          name: formData.name.trim(),
+          type: formData.type,
+          zone: formData.zone,
+          fabricant: formData.fabricant.trim(),
+          status: formData.status,
+          criticite: formData.criticite,
+          ...(formData.model && { model: formData.model.trim() })
+        };
+        
         const data = await api({
           method: 'post',
           url: '/equipment',
-          data: formData
+          data: dataToSend
         });
 
         await fetchEquipment();
@@ -235,6 +290,7 @@ const Equipment = () => {
       
       setIsDialogOpen(false);
       setEditingEquipment(null);
+      setFormErrors({});
       setFormData({
         name: '', type: '' as EquipmentType, zone: '',
         fabricant: '', model: '', status: '' as EquipmentStatus,
@@ -290,6 +346,7 @@ const Equipment = () => {
   const openCreateDialog = () => {
     setEditingEquipment(null);
     setIsSubmitting(false);
+    setFormErrors({});
     setFormData({
       name: '', type: '' as EquipmentType, zone: '',
       fabricant: '', model: '', status: '' as EquipmentStatus,
@@ -442,6 +499,7 @@ const Equipment = () => {
                 if (!open) {
                   setEditingEquipment(null);
                   setIsSubmitting(false);
+                  setFormErrors({});
                   setFormData({
                     name: '', type: '' as EquipmentType, zone: '',
                     fabricant: '', model: '', status: '' as EquipmentStatus,
@@ -468,23 +526,39 @@ const Equipment = () => {
                 <form onSubmit={handleSubmit} className="space-y-4 max-h-[60vh] sm:max-h-96 overflow-y-auto">
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                      <Label htmlFor="name" className="text-sm">Nom</Label>
+                      <Label htmlFor="name" className="text-sm">Nom <span className="text-destructive">*</span></Label>
                       <Input
                         id="name"
                         value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        onChange={(e) => {
+                          setFormData({...formData, name: e.target.value});
+                          if (formErrors.name) {
+                            setFormErrors({...formErrors, name: ''});
+                          }
+                        }}
                         placeholder="Nom de l'équipement"
                         required
-                        className="text-sm sm:text-base"
+                        className={`text-sm sm:text-base ${formErrors.name ? 'border-destructive' : ''}`}
                       />
+                      {formErrors.name && (
+                        <p className="text-xs text-destructive mt-1">{formErrors.name}</p>
+                      )}
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="type" className="text-sm">Type</Label>
-                      <Select value={formData.type} onValueChange={(value: EquipmentType) => setFormData({...formData, type: value})}>
-                        <SelectTrigger className="text-sm sm:text-base">
+                      <Label htmlFor="type" className="text-sm">Type <span className="text-destructive">*</span></Label>
+                      <Select 
+                        value={formData.type} 
+                        onValueChange={(value: EquipmentType) => {
+                          setFormData({...formData, type: value});
+                          if (formErrors.type) {
+                            setFormErrors({...formErrors, type: ''});
+                          }
+                        }}
+                      >
+                        <SelectTrigger className={`text-sm sm:text-base ${formErrors.type ? 'border-destructive' : ''}`}>
                           <SelectValue placeholder="Sélectionner un type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -495,11 +569,22 @@ const Equipment = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                      {formErrors.type && (
+                        <p className="text-xs text-destructive mt-1">{formErrors.type}</p>
+                      )}
                     </div>
                     <div>
-                      <Label htmlFor="zone" className="text-sm">Zone</Label>
-                      <Select value={formData.zone} onValueChange={(value) => setFormData({...formData, zone: value})}>
-                        <SelectTrigger className="text-sm sm:text-base">
+                      <Label htmlFor="zone" className="text-sm">Zone <span className="text-destructive">*</span></Label>
+                      <Select 
+                        value={formData.zone} 
+                        onValueChange={(value) => {
+                          setFormData({...formData, zone: value});
+                          if (formErrors.zone) {
+                            setFormErrors({...formErrors, zone: ''});
+                          }
+                        }}
+                      >
+                        <SelectTrigger className={`text-sm sm:text-base ${formErrors.zone ? 'border-destructive' : ''}`}>
                           <SelectValue placeholder="Sélectionner une zone" />
                         </SelectTrigger>
                         <SelectContent>
@@ -508,28 +593,47 @@ const Equipment = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                      {formErrors.zone && (
+                        <p className="text-xs text-destructive mt-1">{formErrors.zone}</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                      <Label htmlFor="fabricant" className="text-sm">Fabricant</Label>
+                      <Label htmlFor="fabricant" className="text-sm">Fabricant <span className="text-destructive">*</span></Label>
                       <Input
                         id="fabricant"
                         value={formData.fabricant}
-                        onChange={(e) => setFormData({...formData, fabricant: e.target.value})}
+                        onChange={(e) => {
+                          setFormData({...formData, fabricant: e.target.value});
+                          if (formErrors.fabricant) {
+                            setFormErrors({...formErrors, fabricant: ''});
+                          }
+                        }}
                         placeholder="Nom du fabricant"
                         required
-                        className="text-sm sm:text-base"
+                        className={`text-sm sm:text-base ${formErrors.fabricant ? 'border-destructive' : ''}`}
                       />
+                      {formErrors.fabricant && (
+                        <p className="text-xs text-destructive mt-1">{formErrors.fabricant}</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="status" className="text-sm">Statut</Label>
-                      <Select value={formData.status} onValueChange={(value: EquipmentStatus) => setFormData({...formData, status: value})}>
-                        <SelectTrigger className="text-sm sm:text-base">
+                      <Label htmlFor="status" className="text-sm">Statut <span className="text-destructive">*</span></Label>
+                      <Select 
+                        value={formData.status} 
+                        onValueChange={(value: EquipmentStatus) => {
+                          setFormData({...formData, status: value});
+                          if (formErrors.status) {
+                            setFormErrors({...formErrors, status: ''});
+                          }
+                        }}
+                      >
+                        <SelectTrigger className={`text-sm sm:text-base ${formErrors.status ? 'border-destructive' : ''}`}>
                           <SelectValue placeholder="Sélectionner un statut" />
                         </SelectTrigger>
                         <SelectContent>
@@ -540,11 +644,22 @@ const Equipment = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                      {formErrors.status && (
+                        <p className="text-xs text-destructive mt-1">{formErrors.status}</p>
+                      )}
                     </div>
                     <div>
-                      <Label htmlFor="criticite" className="text-sm">Criticité</Label>
-                      <Select value={formData.criticite} onValueChange={(value: CriticalityLevel) => setFormData({...formData, criticite: value})}>
-                        <SelectTrigger className="text-sm sm:text-base">
+                      <Label htmlFor="criticite" className="text-sm">Criticité <span className="text-destructive">*</span></Label>
+                      <Select 
+                        value={formData.criticite} 
+                        onValueChange={(value: CriticalityLevel) => {
+                          setFormData({...formData, criticite: value});
+                          if (formErrors.criticite) {
+                            setFormErrors({...formErrors, criticite: ''});
+                          }
+                        }}
+                      >
+                        <SelectTrigger className={`text-sm sm:text-base ${formErrors.criticite ? 'border-destructive' : ''}`}>
                           <SelectValue placeholder="Sélectionner la criticité" />
                         </SelectTrigger>
                         <SelectContent>
@@ -555,6 +670,9 @@ const Equipment = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                      {formErrors.criticite && (
+                        <p className="text-xs text-destructive mt-1">{formErrors.criticite}</p>
+                      )}
                     </div>
                   </div>
 
@@ -563,6 +681,7 @@ const Equipment = () => {
                       setIsDialogOpen(false);
                       setEditingEquipment(null);
                       setIsSubmitting(false);
+                      setFormErrors({});
                       setFormData({
                         name: '', type: '' as EquipmentType, zone: '',
                         fabricant: '', model: '', status: '' as EquipmentStatus,
@@ -571,7 +690,12 @@ const Equipment = () => {
                     }} className="w-full sm:w-auto" size={isMobile ? "sm" : "default"}>
                       Annuler
                     </Button>
-                    <Button type="submit" className="w-full sm:w-auto" size={isMobile ? "sm" : "default"} disabled={isSubmitting}>
+                    <Button 
+                      type="submit" 
+                      className="w-full sm:w-auto" 
+                      size={isMobile ? "sm" : "default"} 
+                      disabled={isSubmitting || !formData.name.trim() || !formData.type || !formData.zone || !formData.fabricant.trim() || !formData.status || !formData.criticite}
+                    >
                       {isSubmitting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />

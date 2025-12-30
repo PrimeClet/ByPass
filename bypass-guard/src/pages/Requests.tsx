@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   Eye,
   ArrowLeft,
+  Calendar,
 } from "lucide-react"
 import { BypassRequestForm } from "@/components/forms/BypassRequestForm"
 import { RequestDetailsModal } from "@/components/RequestDetailsModal"
@@ -28,6 +29,10 @@ import api from '../axios'
 import type { Equipment, EquipmentType, EquipmentStatus, CriticalityLevel, Zone } from '@/types/equipment';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store/store';
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format } from "date-fns"
+import { fr } from "date-fns/locale"
 
 
 const mockRequests = [
@@ -78,6 +83,8 @@ export default function Requests() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [priorityFilter, setPriorityFilter] = useState("all")
+  const [dateFilter, setDateFilter] = useState("all")
+  const [customDate, setCustomDate] = useState<Date | undefined>(undefined)
   const [requestList, setRequestList] = useState([]);
   const [requestDemand, setRequestDemandList] = useState([]);
   const [requestApprobation, setRequestApprobationList] = useState([]);
@@ -109,14 +116,76 @@ export default function Requests() {
   // Déterminer quelle vue afficher selon l'URL
   const isNewRequest = location.pathname === '/requests/new'
 
+  const getDateRange = (filter: string) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (filter) {
+      case "today":
+        return {
+          start: today,
+          end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1)
+        };
+      case "week":
+        const startOfWeek = new Date(today);
+        const dayOfWeek = today.getDay();
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        startOfWeek.setDate(today.getDate() - daysToMonday);
+        startOfWeek.setHours(0, 0, 0, 0);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        return {
+          start: startOfWeek,
+          end: endOfWeek
+        };
+      case "month":
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        return {
+          start: startOfMonth,
+          end: endOfMonth
+        };
+      case "custom":
+        if (customDate) {
+          const start = new Date(customDate);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(customDate);
+          end.setHours(23, 59, 59, 999);
+          return {
+            start,
+            end
+          };
+        }
+        return null;
+      default:
+        return null;
+    }
+  };
+
+  const matchesDateFilter = (item: any) => {
+    if (dateFilter === "all") return true;
+    
+    const dateRange = getDateRange(dateFilter);
+    if (dateRange && item.created_at) {
+      const itemDate = new Date(item.created_at);
+      return itemDate >= dateRange.start && itemDate <= dateRange.end;
+    } else if (dateFilter === "custom" && !customDate) {
+      return true;
+    }
+    return false;
+  };
+
   const filteredRequests = (requestList ?? []).filter(request => {
     const matchesSearch = (request.equipment?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (request.sensor?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (request.request_code || '').toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || request.status === statusFilter
     const matchesPriority = priorityFilter === "all" || request.priority === priorityFilter
+    const matchesDate = matchesDateFilter(request)
     
-    return matchesSearch && matchesStatus && matchesPriority
+    return matchesSearch && matchesStatus && matchesPriority && matchesDate
   })
 
   const filteredDemand = (requestDemand ?? []).filter(request => {
@@ -125,8 +194,9 @@ export default function Requests() {
                          (request.request_code || '').toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || request.status === statusFilter
     const matchesPriority = priorityFilter === "all" || request.priority === priorityFilter
+    const matchesDate = matchesDateFilter(request)
     
-    return matchesSearch && matchesStatus && matchesPriority
+    return matchesSearch && matchesStatus && matchesPriority && matchesDate
   })
 
   const filteredApprobation = (requestApprobation ?? []).filter(request => {
@@ -135,8 +205,9 @@ export default function Requests() {
                          (request.request_code || '').toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || request.status === statusFilter
     const matchesPriority = priorityFilter === "all" || request.priority === priorityFilter
+    const matchesDate = matchesDateFilter(request)
     
-    return matchesSearch && matchesStatus && matchesPriority
+    return matchesSearch && matchesStatus && matchesPriority && matchesDate
   })
 
   const filteredActifs = (requestActifs ?? []).filter(request => {
@@ -145,8 +216,9 @@ export default function Requests() {
                          (request.request_code || '').toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || request.status === statusFilter
     const matchesPriority = priorityFilter === "all" || request.priority === priorityFilter
+    const matchesDate = matchesDateFilter(request)
     
-    return matchesSearch && matchesStatus && matchesPriority
+    return matchesSearch && matchesStatus && matchesPriority && matchesDate
   })
 
   // Fonction pour obtenir la liste filtrée selon l'onglet actif
@@ -176,7 +248,14 @@ export default function Requests() {
   // Réinitialiser la page quand les filtres, l'onglet ou le nombre d'éléments par page changent
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, priorityFilter, activeTab, itemsPerPage]);
+  }, [searchTerm, statusFilter, priorityFilter, dateFilter, customDate, activeTab, itemsPerPage]);
+
+  // Réinitialiser la date personnalisée quand le filtre change
+  useEffect(() => {
+    if (dateFilter !== "custom") {
+      setCustomDate(undefined);
+    }
+  }, [dateFilter]);
 
 
 
@@ -316,6 +395,8 @@ export default function Requests() {
     setSearchTerm("")
     setStatusFilter("all")
     setPriorityFilter("all")
+    setDateFilter("all")
+    setCustomDate(undefined)
   }
 
   // Si on est sur /requests/new, afficher le formulaire
@@ -423,7 +504,7 @@ export default function Requests() {
                 </CardTitle>
               </CardHeader> */}
               <CardContent className="p-4 sm:p-6 w-full min-w-0">
-                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
+                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 w-full min-w-0">
                   <div className="relative sm:col-span-2 lg:col-span-1 w-full min-w-0">
                     <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                     <Input
@@ -456,15 +537,62 @@ export default function Requests() {
                       <SelectItem value="low">Faible</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Select value={dateFilter} onValueChange={setDateFilter}>
+                    <SelectTrigger className="text-sm w-full min-w-0">
+                      <SelectValue placeholder="Période" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toutes les périodes</SelectItem>
+                      <SelectItem value="today">Aujourd'hui</SelectItem>
+                      <SelectItem value="week">Cette semaine</SelectItem>
+                      <SelectItem value="month">Ce mois</SelectItem>
+                      <SelectItem value="custom">Personnalisée</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button variant="outline" onClick={() => {
                     setSearchTerm("")
                     setStatusFilter("all")
                     setPriorityFilter("all")
+                    setDateFilter("all")
+                    setCustomDate(undefined)
                   }} className="text-sm w-full sm:w-auto min-w-0 truncate">
                     <span className="hidden sm:inline truncate">Réinitialiser filtres</span>
                     <span className="sm:hidden truncate">Réinitialiser</span>
                   </Button>
                 </div>
+                {/* Sélecteur de date personnalisée */}
+                {dateFilter === "custom" && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="space-y-2 max-w-xs">
+                      <Label className="text-sm">Sélectionner une date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={`w-full justify-start text-left font-normal text-sm ${
+                              !customDate && "text-muted-foreground"
+                            }`}
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {customDate ? (
+                              format(customDate, "PPP", { locale: fr })
+                            ) : (
+                              <span>Sélectionner une date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={customDate}
+                            onSelect={setCustomDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -793,7 +921,7 @@ export default function Requests() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
-                    <div className="grid gap-3 sm:gap-3 md:gap-4 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
+                    <div className="grid gap-3 sm:gap-3 md:gap-4 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 w-full min-w-0">
                       <div className="relative sm:col-span-2 lg:col-span-1 w-full min-w-0">
                         <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                         <Input
@@ -826,15 +954,62 @@ export default function Requests() {
                           <SelectItem value="low">Faible</SelectItem>
                         </SelectContent>
                       </Select>
+                      <Select value={dateFilter} onValueChange={setDateFilter}>
+                        <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
+                          <SelectValue placeholder="Période" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes les périodes</SelectItem>
+                          <SelectItem value="today">Aujourd'hui</SelectItem>
+                          <SelectItem value="week">Cette semaine</SelectItem>
+                          <SelectItem value="month">Ce mois</SelectItem>
+                          <SelectItem value="custom">Personnalisée</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Button variant="outline" onClick={() => {
                         setSearchTerm("")
                         setStatusFilter("all")
                         setPriorityFilter("all")
+                        setDateFilter("all")
+                        setCustomDate(undefined)
                       }} className="text-sm h-9 sm:h-10 w-full sm:w-auto">
                         <span className="hidden sm:inline">Réinitialiser filtres</span>
                         <span className="sm:hidden">Réinitialiser</span>
                       </Button>
                     </div>
+                    {/* Sélecteur de date personnalisée */}
+                    {dateFilter === "custom" && (
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="space-y-2 max-w-xs">
+                          <Label className="text-sm">Sélectionner une date</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={`w-full justify-start text-left font-normal text-sm ${
+                                  !customDate && "text-muted-foreground"
+                                }`}
+                              >
+                                <Calendar className="mr-2 h-4 w-4" />
+                                {customDate ? (
+                                  format(customDate, "PPP", { locale: fr })
+                                ) : (
+                                  <span>Sélectionner une date</span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <CalendarComponent
+                                mode="single"
+                                selected={customDate}
+                                onSelect={setCustomDate}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -1077,7 +1252,7 @@ export default function Requests() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-3 sm:p-4 pt-0 w-full min-w-0">
-                      <div className="grid gap-3 sm:gap-3 md:gap-4 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
+                      <div className="grid gap-3 sm:gap-3 md:gap-4 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 w-full min-w-0">
                       <div className="relative sm:col-span-2 lg:col-span-1 w-full min-w-0">
                         <Search className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                         <Input
@@ -1110,15 +1285,62 @@ export default function Requests() {
                           <SelectItem value="low">Faible</SelectItem>
                         </SelectContent>
                       </Select>
+                      <Select value={dateFilter} onValueChange={setDateFilter}>
+                        <SelectTrigger className="text-sm h-9 sm:h-10 w-full min-w-0">
+                          <SelectValue placeholder="Période" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes les périodes</SelectItem>
+                          <SelectItem value="today">Aujourd'hui</SelectItem>
+                          <SelectItem value="week">Cette semaine</SelectItem>
+                          <SelectItem value="month">Ce mois</SelectItem>
+                          <SelectItem value="custom">Personnalisée</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Button variant="outline" onClick={() => {
                         setSearchTerm("")
                         setStatusFilter("all")
                         setPriorityFilter("all")
+                        setDateFilter("all")
+                        setCustomDate(undefined)
                       }} className="text-sm h-9 sm:h-10 w-full sm:w-auto">
                         <span className="hidden sm:inline">Réinitialiser filtres</span>
                         <span className="sm:hidden">Réinitialiser</span>
                       </Button>
                       </div>
+                      {/* Sélecteur de date personnalisée */}
+                      {dateFilter === "custom" && (
+                        <div className="mt-4 pt-4 border-t">
+                          <div className="space-y-2 max-w-xs">
+                            <Label className="text-sm">Sélectionner une date</Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={`w-full justify-start text-left font-normal text-sm ${
+                                    !customDate && "text-muted-foreground"
+                                  }`}
+                                >
+                                  <Calendar className="mr-2 h-4 w-4" />
+                                  {customDate ? (
+                                    format(customDate, "PPP", { locale: fr })
+                                  ) : (
+                                    <span>Sélectionner une date</span>
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={customDate}
+                                  onSelect={setCustomDate}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -1444,7 +1666,7 @@ export default function Requests() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6 w-full min-w-0">
-                      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full min-w-0">
+                      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 w-full min-w-0">
                       <div className="relative sm:col-span-2 lg:col-span-1 w-full min-w-0">
                         <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                         <Input
@@ -1477,15 +1699,62 @@ export default function Requests() {
                           <SelectItem value="low">Faible</SelectItem>
                         </SelectContent>
                       </Select>
+                      <Select value={dateFilter} onValueChange={setDateFilter}>
+                        <SelectTrigger className="text-sm w-full min-w-0">
+                          <SelectValue placeholder="Période" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes les périodes</SelectItem>
+                          <SelectItem value="today">Aujourd'hui</SelectItem>
+                          <SelectItem value="week">Cette semaine</SelectItem>
+                          <SelectItem value="month">Ce mois</SelectItem>
+                          <SelectItem value="custom">Personnalisée</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Button variant="outline" onClick={() => {
                         setSearchTerm("")
                         setStatusFilter("all")
                         setPriorityFilter("all")
+                        setDateFilter("all")
+                        setCustomDate(undefined)
                       }} className="text-sm w-full sm:w-auto min-w-0 truncate">
                         <span className="hidden sm:inline truncate">Réinitialiser filtres</span>
                         <span className="sm:hidden truncate">Réinitialiser</span>
                       </Button>
                       </div>
+                      {/* Sélecteur de date personnalisée */}
+                      {dateFilter === "custom" && (
+                        <div className="mt-4 pt-4 border-t">
+                          <div className="space-y-2 max-w-xs">
+                            <Label className="text-sm">Sélectionner une date</Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={`w-full justify-start text-left font-normal text-sm ${
+                                    !customDate && "text-muted-foreground"
+                                  }`}
+                                >
+                                  <Calendar className="mr-2 h-4 w-4" />
+                                  {customDate ? (
+                                    format(customDate, "PPP", { locale: fr })
+                                  ) : (
+                                    <span>Sélectionner une date</span>
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={customDate}
+                                  onSelect={setCustomDate}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
